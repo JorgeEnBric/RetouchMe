@@ -1,0 +1,183 @@
+package com.example.retake_lite.face
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PointF
+import com.google.mlkit.vision.face.Face
+import com.google.mlkit.vision.face.FaceContour
+import kotlin.math.max
+import kotlin.math.min
+
+/**
+ * Construye la máscara de la cara. Ahora parametrizable: edgeShrink permite
+ * contraer el borde hacia el centro antes de difuminar (corrige el "halo"
+ * que queda fuera del óvalo real de la cara), y featherRadiusPx controla
+ * qué tan ancha es la transición difuminada.
+ */
+
+object FaceMaskBuilder {
+
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+    }
+
+    /**
+     * @param edgeShrink fracción del radio de la cara que se contrae hacia el
+     *        centro (0 = sin contraer). Útil para "comerse" el halo exterior.
+     */
+    fun createFaceMask(
+        width: Int,
+        height: Int,
+        face: Face,
+        edgeShrink: Float = 0f
+    ): Bitmap {
+        val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(mask)
+
+        val contourFactor = (1.10f - edgeShrink).coerceAtLeast(0.5f)
+        val contour = face.getContour(FaceContour.FACE)
+        if (contour != null && contour.points.size >= 3) {
+            canvas.drawPath(expandContour(contour.points, contourFactor), fillPaint)
+        } else {
+            val box = face.boundingBox
+            val cx = box.centerX().toFloat()
+            val cy = box.centerY().toFloat()
+            val rx = box.width() * (0.55f - edgeShrink * 0.5f)
+            val ry = box.height() * (0.62f - edgeShrink * 0.5f)
+            canvas.drawOval(cx - rx, cy - ry, cx + rx, cy + ry, fillPaint)
+        }
+
+        return mask
+    }
+
+    private fun expandContour(points: List<PointF>, factor: Float): Path {
+        val cx = points.map { it.x }.average().toFloat()
+        val cy = points.map { it.y }.average().toFloat()
+        val path = Path()
+        points.forEachIndexed { i, p ->
+            val x = cx + (p.x - cx) * factor
+            val y = cy + (p.y - cy) * factor
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        return path
+    }
+}
+
+object LaplacianBlender {
+
+    fun blend(base: Bitmap, overlay: Bitmap, mask: Bitmap, featherRadiusPx: Float = 18f): Bitmap {
+        require(base.width == overlay.width && base.height == overlay.height)
+        require(base.width == mask.width && base.height == mask.height)
+
+        val w = base.width
+        val h = base.height
+        val passes = (featherRadiusPx / 5f).toInt().coerceIn(0, 8)
+        val softMask = if (passes == 0) mask else blurMaskRepeated(mask, passes)
+
+        val basePx = IntArray(w * h)
+        val overlayPx = IntArray(w * h)
+        val maskPx = IntArray(w * h)
+        base.getPixels(basePx, 0, w, 0, 0, w, h)
+        overlay.getPixels(overlayPx, 0, w, 0, 0, w, h)
+        softMask.getPixels(maskPx, 0, w, 0, 0, w, h)
+
+        val outPx = IntArray(w * h)
+        for (i in outPx.indices) {
+            val m = Color.alpha(maskPx[i]) / 255f
+            if (m < 0.02f) {
+                outPx[i] = basePx[i]
+                continue
+            }
+            val o = overlayPx[i]
+            val oAlpha = Color.alpha(o) / 255f
+            if (oAlpha < 0.05f) {
+                outPx[i] = basePx[i]
+                continue
+            }
+            val weight = m.coerceIn(0f, 1f)
+            val b = basePx[i]
+            outPx[i] = Color.argb(
+                255,
+                lerp(Color.red(b), Color.red(o), weight),
+                lerp(Color.green(b), Color.green(o), weight),
+                lerp(Color.blue(b), Color.blue(o), weight)
+            )
+        }
+
+        val out = base.copy(Bitmap.Config.ARGB_8888, true)
+        out.setPixels(outPx, 0, w, 0, 0, w, h)
+        if (softMask !== mask) softMask.recycle()
+        return out
+    }
+
+    fun clipOverlayToMask(overlay: Bitmap, mask: Bitmap): Bitmap {
+        val w = overlay.width
+        val h = overlay.height
+        val oPx = IntArray(w * h)
+        val mPx = IntArray(w * h)
+        overlay.getPixels(oPx, 0, w, 0, 0, w, h)
+        mask.getPixels(mPx, 0, w, 0, 0, w, h)
+
+        for (i in oPx.indices) {
+            val m = Color.alpha(mPx[i])
+            if (m < 8) {
+                oPx[i] = Color.TRANSPARENT
+            } else {
+                val a = (Color.alpha(oPx[i]) * m / 255f).toInt().coerceIn(0, 255)
+                oPx[i] = Color.argb(a, Color.red(oPx[i]), Color.green(oPx[i]), Color.blue(oPx[i]))
+            }
+        }
+        val out = overlay.copy(Bitmap.Config.ARGB_8888, true)
+        out.setPixels(oPx, 0, w, 0, 0, w, h)
+        return out
+    }
+
+    private fun lerp(a: Int, b: Int, t: Float): Int =
+        (a + (b - a) * t).toInt().coerceIn(0, 255)
+
+    private fun blurMaskRepeated(mask: Bitmap, passes: Int): Bitmap {
+        var current = mask
+        repeat(passes) {
+            val blurred = blurMaskOnce(current)
+            if (current !== mask) current.recycle()
+            current = blurred
+        }
+        return current
+    }
+
+    private fun blurMaskOnce(mask: Bitmap): Bitmap {
+        val w = mask.width
+        val h = mask.height
+        val src = IntArray(w * h)
+        mask.getPixels(src, 0, w, 0, 0, w, h)
+        val dst = IntArray(w * h)
+        val radius = 5
+
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                var sum = 0
+                var count = 0
+                for (dy in -radius..radius) {
+                    for (dx in -radius..radius) {
+                        val nx = x + dx
+                        val ny = y + dy
+                        if (nx in 0 until w && ny in 0 until h) {
+                            sum += Color.alpha(src[ny * w + nx])
+                            count++
+                        }
+                    }
+                }
+                dst[y * w + x] = Color.argb(if (count > 0) sum / count else 0, 255, 255, 255)
+            }
+        }
+
+        return Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also {
+            it.setPixels(dst, 0, w, 0, 0, w, h)
+        }
+    }
+}

@@ -1,0 +1,65 @@
+<resources>
+    <string name="app_name">Retake_lite</string>
+    <string name="navigation_drawer_open">Abrir menú</string>
+    <string name="navigation_drawer_close">Cerrar menú</string>
+    <string name="nav_header_title">Retake Lite</string>
+    <string name="nav_header_subtitle">Intercambio de rostros</string>
+    <string name="nav_header_desc">Encabezado de navegación</string>
+    <string name="action_settings">Ajustes</string>
+
+    <string name="menu_home">Inicio</string>
+    <string name="menu_profiles">Perfiles de rostros</string>
+    <string name="menu_face_swap">Retake</string>
+
+    <string name="title_profiles">Perfiles de rostros</string>
+    <string name="title_face_swap">Retake — Intercambiar rostro</string>
+    <string name="profiles_empty">No hay perfiles.\nPulsa + para crear uno y añade 8–12 fotos variadas (como en Retake).</string>
+    <string name="add_profile">Crear perfil</string>
+    <string name="new_profile">Nuevo perfil</string>
+    <string name="profile_name_hint">Nombre del perfil</string>
+    <string name="default_profile_name">Perfil %1$d</string>
+    <string name="create">Crear</string>
+    <string name="save">Guardar</string>
+    <string name="delete">Eliminar</string>
+    <string name="rename_profile">Renombrar perfil</string>
+    <string name="delete_profile">Eliminar perfil</string>
+    <string name="delete_profile_confirm">¿Eliminar el perfil "%1$s" y todos sus rostros?</string>
+    <string name="add_photos">Añadir fotos</string>
+    <string name="face_count">%1$d rostro(s) guardado(s)</string>
+    <string name="face_thumbnail">Miniatura de rostro</string>
+    <string name="remove_face">Quitar rostro</string>
+    <string name="faces_added">%1$d rostro(s) añadido(s)</string>
+    <string name="no_faces_in_photos">No se detectaron rostros en las fotos seleccionadas</string>
+
+    <string name="pick_from_gallery">Cargar foto desde galería</string>
+    <string name="image_preview">Vista previa</string>
+    <string name="tap_face_hint">Toca el rostro al que quieres aplicar el retake</string>
+    <string name="no_faces_detected">No se detectaron rostros en esta imagen</string>
+    <string name="selected_face">Rostro seleccionado: %1$d</string>
+    <string name="select_profile">Perfil de reemplazo</string>
+    <string name="select_reference_face">Rostro de referencia del perfil</string>
+    <string name="add_swap">Añadir a la lista de intercambio</string>
+    <string name="pending_swaps">Intercambios pendientes</string>
+    <string name="pending_swap_item">%1$s → %2$s</string>
+    <string name="remove_pending_swap">Quitar intercambio</string>
+    <string name="apply_swaps">Aplicar retake</string>
+    <string name="select_face_first">Primero selecciona un rostro en la imagen</string>
+    <string name="swap_added">Intercambio añadido a la lista</string>
+    <string name="swap_faces">Intercambiar rostros</string>
+    <string name="result_image">Resultado</string>
+    <string name="save_result">Guardar resultado</string>
+    <string name="face_number">Rostro %1$d</string>
+    <string name="no_swap">Sin cambio</string>
+    <string name="no_profiles_warning">Crea perfiles con fotos antes de intercambiar rostros</string>
+    <string name="select_at_least_one_profile">Selecciona al menos un perfil para intercambiar</string>
+    <string name="profile_has_no_faces">El perfil seleccionado no tiene rostros guardados</string>
+    <string name="swap_complete">Retake aplicado</string>
+    <string name="error_loading_image">Error al cargar la imagen</string>
+    <string name="error_saving">Error al guardar la imagen</string>
+    <string name="image_saved">Imagen guardada en la galería</string>
+
+    <string name="home_title">Bienvenido a Retake Lite</string>
+    <string name="home_description">Crea un perfil con varias fotos (como Retake) y aplica un retake natural sobre rostros en otras imágenes.</string>
+    <string name="open_profiles">Gestionar perfiles</string>
+    <string name="open_face_swap">Aplicar retake</string>
+</resources>
