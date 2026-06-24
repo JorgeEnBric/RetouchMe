@@ -53,4 +53,18 @@ class FaceSwapEngine(context: Context, private val faceDetector: FaceDetectorHel
     fun close() {
         retakeEngine.close()
     }
+
+    /**
+     * Consulta cuál foto del perfil elegiría el modo "automático" (vía
+     * OpenFace), SIN correr ningún swap. Pensado para resaltar esa foto en
+     * tu selector manual, o para resolver el referenceImageId real cuando
+     * el usuario elige el modo automático en el toggle de la UI.
+     *
+     * Reutiliza el mismo modelCache interno de FaceRetakeEngine, así que si
+     * ya se calculó antes para este profileId, es prácticamente instantáneo.
+     */
+    suspend fun getAutoSelectedReferenceId(
+        profileId: Long,
+        images: List<FaceImageEntity>
+    ): Long? = retakeEngine.getBestReferenceId(profileId, images)
 }

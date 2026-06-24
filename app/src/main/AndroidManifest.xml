@@ -16,7 +16,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.Retake_lite.NoActionBar">
+            android:theme="@style/Theme.Retake_lite">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -28,13 +28,21 @@
             android:exported="false"
             android:label="@string/title_profiles"
             android:parentActivityName=".MainActivity"
-            android:theme="@style/Theme.Retake_lite.NoActionBar" />
+            android:theme="@style/Theme.Retake_lite" />
         <activity
             android:name=".ui.swap.FaceSwapActivity"
             android:exported="false"
             android:label="@string/title_face_swap"
             android:parentActivityName=".MainActivity"
-            android:theme="@style/Theme.Retake_lite.NoActionBar" />
+            android:theme="@style/Theme.Retake_lite" />
+
+        <activity
+            android:name=".ui.edit.RetakeEditActivity"
+            android:exported="false"
+            android:label="Editor Retake"
+            android:parentActivityName=".MainActivity" />
+
     </application>
 
 </manifest>
+
