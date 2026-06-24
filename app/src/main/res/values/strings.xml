@@ -62,4 +62,14 @@
     <string name="home_description">Crea un perfil con varias fotos (como Retake) y aplica un retake natural sobre rostros en otras imágenes.</string>
     <string name="open_profiles">Gestionar perfiles</string>
     <string name="open_face_swap">Aplicar retake</string>
+    <!-- Entradas de ajustes de Retake -->
+    <string name="title_retake_edit">Editar resultado</string>
+    <string name="preview_image">Vista previa del resultado</string>
+    <string name="tool_zoom">Zoom</string>
+    <string name="tool_rotate">Rotación</string>
+    <string name="tool_halo">Halo / borde</string>
+    <string name="tool_color">Tono de piel</string>
+    <string name="edit_result">Editar resultado</string>
+    <string name="cancel">Cancelar</string>
+    <string name="apply">Aplicar</string>
 </resources>

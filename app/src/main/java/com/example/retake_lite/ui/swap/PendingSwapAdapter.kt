@@ -12,7 +12,8 @@ data class PendingSwap(
     val faceLabel: String,
     val profileId: Long,
     val profileName: String,
-    val referenceImageId: Long?
+    val referenceImageId: Long?,
+    val isAutoSelected: Boolean = false  // opcional: para mostrar un ícono/badge "auto" en el RecyclerView de pendientes
 )
 
 class PendingSwapAdapter(

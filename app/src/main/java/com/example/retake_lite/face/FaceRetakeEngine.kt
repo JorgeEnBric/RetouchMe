@@ -133,6 +133,19 @@ class FaceRetakeEngine(
         auto.sourceBitmap.recycle()
     }
 
+    /**
+     * Devuelve el id de la foto que el modo automático elegiría para este
+     * perfil, sin correr ningún swap. Usa/llena el mismo modelCache que
+     * computeAutoResult, así que no duplica trabajo si ya se calculó antes.
+     */
+    suspend fun getBestReferenceId(profileId: Long, images: List<FaceImageEntity>): Long? {
+        if (images.isEmpty()) return null
+        val model = modelCache.getOrPut(profileId) {
+            ProfileFaceModelBuilder.build(images, faceDetector, embedder)
+        }
+        return model?.bestReferenceId ?: images.first().id
+    }
+
     private fun resolveReference(
         images: List<FaceImageEntity>,
         preferredId: Long?,

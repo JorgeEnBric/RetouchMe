@@ -86,7 +86,11 @@
                         android:layout_marginTop="12dp"
                         android:text="@string/select_profile"
                         android:textAppearance="?attr/textAppearanceLabelMedium" />
-
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchAutoSelect"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Permitir que la IA seleccione la mejor foto" />
                     <Spinner
                         android:id="@+id/spinnerProfile"
                         android:layout_width="match_parent"
@@ -161,6 +165,12 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/save_result"
                 android:visibility="gone" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEditResult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/title_retake_edit" />
 
         </LinearLayout>
 

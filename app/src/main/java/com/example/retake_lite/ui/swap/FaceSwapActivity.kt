@@ -1,6 +1,7 @@
 package com.example.retake_lite.ui.swap
 
 import android.content.ContentValues
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
@@ -21,6 +22,8 @@ import com.example.retake_lite.databinding.ActivityFaceSwapBinding
 import com.example.retake_lite.face.FaceDetectorHelper
 import com.example.retake_lite.face.FaceSwapAssignment
 import com.example.retake_lite.face.FaceSwapEngine
+import com.example.retake_lite.ui.edit.RetakeEditActivity
+import com.example.retake_lite.ui.edit.RetakeEditSession
 import com.example.retake_lite.util.BitmapUtils
 import com.google.android.material.snackbar.Snackbar
 import com.google.mlkit.vision.face.Face
@@ -44,7 +47,19 @@ class FaceSwapActivity : AppCompatActivity() {
     private var profileImagesCache = mutableMapOf<Long, List<FaceImageEntity>>()
     private var selectedFaceIndex: Int = -1
     private var selectedReferenceId: Long? = null
+    private var lastAssignments: List<FaceSwapAssignment> = emptyList()
     private val pendingSwaps = mutableListOf<PendingSwap>()
+
+    /**
+     * Toggle de modo de selección de referencia:
+     *  - false (manual, default): se usa la foto que el usuario elige en
+     *    recyclerReferenceFaces (selectedReferenceId), igual que antes.
+     *  - true (automático): se delega en el FaceProfileModel de OpenFace
+     *    (swapEngine.getAutoSelectedReferenceId) — se pasa referenceImageId
+     *    = null en el assignment para que FaceRetakeEngine.resolveReference
+     *    use el bestReferenceId del modelo en vez de forzar una foto.
+     */
+    private var useAutoSelection = false
 
     private lateinit var referenceAdapter: ReferenceFaceAdapter
     private lateinit var pendingAdapter: PendingSwapAdapter
@@ -71,6 +86,16 @@ class FaceSwapActivity : AppCompatActivity() {
         binding.btnAddSwap.setOnClickListener { addPendingSwap() }
         binding.btnSwap.setOnClickListener { performSwap() }
         binding.btnSaveResult.setOnClickListener { saveResult() }
+        binding.btnEditResult.setOnClickListener { openEditScreen() }
+
+        // NUEVO: switch de selección automática. Requiere un
+        // <com.google.android.material.switchmaterial.SwitchMaterial
+        //     android:id="@+id/switchAutoSelect" .../>
+        // en activity_face_swap.xml (ver nota al final de la respuesta).
+        binding.switchAutoSelect.setOnCheckedChangeListener { _, isChecked ->
+            useAutoSelection = isChecked
+            onAutoSelectionToggled()
+        }
 
         binding.faceOverlay.setOnFaceSelectedListener { index ->
             onFaceSelected(index)
@@ -108,6 +133,34 @@ class FaceSwapActivity : AppCompatActivity() {
         binding.recyclerPendingSwaps.apply {
             layoutManager = LinearLayoutManager(this@FaceSwapActivity)
             adapter = pendingAdapter
+        }
+    }
+
+    /**
+     * Se llama al cambiar el switch. En modo automático, el selector manual
+     * se deshabilita visualmente (sigue mostrando las fotos, pero no se usa
+     * la selección) y se resalta cuál foto eligió el modelo, para que el
+     * usuario vea la decisión y pueda volver a manual si no le convence.
+     */
+    private fun onAutoSelectionToggled() {
+        binding.recyclerReferenceFaces.alpha = if (useAutoSelection) 0.5f else 1.0f
+        binding.recyclerReferenceFaces.isEnabled = !useAutoSelection
+
+        val profilePosition = binding.spinnerProfile.selectedItemPosition
+        if (profilePosition !in profiles.indices) return
+        val profileId = profiles[profilePosition].id
+        val images = profileImagesCache[profileId] ?: return
+        if (images.isEmpty()) return
+
+        if (useAutoSelection) {
+            lifecycleScope.launch {
+                val autoId = swapEngine.getAutoSelectedReferenceId(profileId, images)
+                autoId?.let { referenceAdapter.setSelection(it) }
+            }
+        } else {
+            // Al volver a manual, se resalta lo último seleccionado a mano
+            // (o la primera foto si nunca se eligió nada explícitamente).
+            referenceAdapter.setSelection(selectedReferenceId ?: images.first().id)
         }
     }
 
@@ -150,6 +203,7 @@ class FaceSwapActivity : AppCompatActivity() {
         selectedReferenceId = null
         binding.imageResult.visibility = View.GONE
         binding.btnSaveResult.visibility = View.GONE
+        binding.btnEditResult.visibility = View.GONE
         binding.cardSelection.visibility = View.GONE
         updatePendingVisibility()
         updateSwapButtonState()
@@ -200,11 +254,23 @@ class FaceSwapActivity : AppCompatActivity() {
                 repository.getImagesForProfile(profileId)
             }
             referenceAdapter.submitList(images)
-            if (images.isNotEmpty()) {
+
+            if (images.isEmpty()) {
+                selectedReferenceId = null
+                return@launch
+            }
+
+            if (useAutoSelection) {
+                // En modo automático resaltamos la elección del modelo en
+                // vez de la primera foto de la lista.
+                val autoId = swapEngine.getAutoSelectedReferenceId(profileId, images)
+                referenceAdapter.setSelection(autoId ?: images.first().id)
+                // selectedReferenceId se deja como referencia de respaldo
+                // para cuando el usuario vuelva a modo manual.
+                selectedReferenceId = autoId ?: images.first().id
+            } else {
                 selectedReferenceId = images.first().id
                 referenceAdapter.setSelection(images.first().id)
-            } else {
-                selectedReferenceId = null
             }
         }
     }
@@ -225,7 +291,13 @@ class FaceSwapActivity : AppCompatActivity() {
             return
         }
 
-        val referenceId = selectedReferenceId ?: images.first().id
+        // CLAVE: en modo automático se guarda null como referenceImageId.
+        // Eso es lo que hace que FaceRetakeEngine.resolveReference use el
+        // bestReferenceId del FaceProfileModel en vez de forzar una foto
+        // fija — y además, si el perfil cambia (se agregan/quitan fotos)
+        // antes del swap final, la elección automática se recalcula con
+        // el contenido más reciente en vez de quedar "congelada".
+        val referenceId: Long? = if (useAutoSelection) null else (selectedReferenceId ?: images.first().id)
         val faceLabel = getString(R.string.face_number, selectedFaceIndex + 1)
 
         pendingSwaps.removeAll { it.faceIndex == selectedFaceIndex }
@@ -235,7 +307,8 @@ class FaceSwapActivity : AppCompatActivity() {
                 faceLabel = faceLabel,
                 profileId = profile.id,
                 profileName = profile.name,
-                referenceImageId = referenceId
+                referenceImageId = referenceId,
+                isAutoSelected = useAutoSelection
             )
         )
 
@@ -269,35 +342,81 @@ class FaceSwapActivity : AppCompatActivity() {
         val assignments = pendingSwaps.map {
             FaceSwapAssignment(it.faceIndex, it.profileId, it.referenceImageId)
         }
+        lastAssignments = assignments
 
         lifecycleScope.launch {
-            // Todo el procesamiento pesado (I/O y CPU) se traslada a Dispatchers.Default / IO
             val result = withContext(Dispatchers.Default) {
                 val profileImages = mutableMapOf<Long, List<FaceImageEntity>>()
 
                 assignments.forEach { assignment ->
                     if (!profileImages.containsKey(assignment.profileId)) {
-                        // Obtenemos la caché o consultamos la base de datos de manera segura en segundo plano
                         profileImages[assignment.profileId] =
                             profileImagesCache[assignment.profileId]
                                 ?: repository.getImagesForProfile(assignment.profileId)
                     }
                 }
 
-                // Ejecuta el procesamiento de intercambio de rostros
                 swapEngine.swapFaces(bitmap, detectedFaces, assignments, profileImages)
             }
 
-            // Regresamos al hilo principal para actualizar la UI
             resultBitmap?.recycle()
             resultBitmap = result
             binding.imageResult.setImageBitmap(result)
             binding.imageResult.visibility = View.VISIBLE
             binding.btnSaveResult.visibility = View.VISIBLE
+            // La edición manual post-procesamiento opera sobre UNA cara a la
+            // vez (FaceAdjustments no distingue entre varias caras de la
+            // misma imagen). Si el usuario hizo swap de varios rostros a la
+            // vez, se oculta el botón para evitar ambigüedad sobre cuál cara
+            // se editaría.
+            binding.btnEditResult.visibility =
+                if (lastAssignments.size == 1) View.VISIBLE else View.GONE
             binding.progressBar.visibility = View.GONE
             binding.btnSwap.isEnabled = true
 
             Snackbar.make(binding.root, R.string.swap_complete, Snackbar.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Abre RetakeEditActivity para ajustar manualmente zoom/rotación/halo/tono
+     * del único rostro intercambiado en el último swap. Recalcula el
+     * AutoRetakeResult (detección + alineación) una vez aquí, ya que
+     * swapFaces() no lo expone — pero esta vez ya está cacheado en
+     * FaceRetakeEngine.modelCache, así que es rápido.
+     */
+    private fun openEditScreen() {
+        val assignment = lastAssignments.singleOrNull() ?: return
+        val bitmap = sourceBitmap ?: return
+        val targetFace = detectedFaces.getOrNull(assignment.faceIndex) ?: return
+
+        binding.progressBar.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            val images = profileImagesCache[assignment.profileId]
+                ?: withContext(Dispatchers.IO) { repository.getImagesForProfile(assignment.profileId) }
+
+            val auto = withContext(Dispatchers.Default) {
+                swapEngine.retakeEngine.computeAutoResult(
+                    bitmap, targetFace, assignment.profileId, images, assignment.referenceImageId
+                )
+            }
+            binding.progressBar.visibility = View.GONE
+
+            if (auto == null) {
+                Snackbar.make(binding.root, R.string.error_loading_image, Snackbar.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            RetakeEditSession.start(
+                engine = swapEngine.retakeEngine,
+                auto = auto
+            ) { editedBitmap ->
+                resultBitmap?.recycle()
+                resultBitmap = editedBitmap
+                binding.imageResult.setImageBitmap(editedBitmap)
+            }
+
+            startActivity(Intent(this@FaceSwapActivity, RetakeEditActivity::class.java))
         }
     }
 
@@ -345,5 +464,6 @@ class FaceSwapActivity : AppCompatActivity() {
         sourceBitmap?.recycle()
         resultBitmap?.recycle()
         faceDetector.close()
+        swapEngine.close()
     }
 }
