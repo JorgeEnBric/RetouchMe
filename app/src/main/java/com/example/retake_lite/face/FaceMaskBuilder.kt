@@ -27,13 +27,14 @@ object FaceMaskBuilder {
     fun createFaceMask(
         width: Int,
         height: Int,
-        face: Face,
+        face: Face?,
         edgeShrink: Float = 0f,
         edgeShrinkLeft: Float = 0f,
         edgeShrinkRight: Float = 0f,
         edgeShrinkTop: Float = 0f,
         edgeShrinkBottom: Float = 0f
     ): Bitmap {
+        if (face == null) return createFullMask(width, height)
         val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(mask)
 
@@ -57,6 +58,12 @@ object FaceMaskBuilder {
             canvas.drawOval(cx - rx, cy - ry, cx + rx, cy + ry, fillPaint)
         }
 
+        return mask
+    }
+
+    fun createFullMask(width: Int, height: Int): Bitmap {
+        val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        Canvas(mask).drawColor(Color.WHITE)
         return mask
     }
 

@@ -43,6 +43,12 @@
             android:label="Editor Retake"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".ui.edit.PostProcessActivity"
+            android:exported="false"
+            android:label="@string/title_post_process"
+            android:parentActivityName=".MainActivity" />
+
     </application>
 
 </manifest>

@@ -281,7 +281,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/apply" />
+                android:text="@string/continue_label" />
 
         </LinearLayout>
 

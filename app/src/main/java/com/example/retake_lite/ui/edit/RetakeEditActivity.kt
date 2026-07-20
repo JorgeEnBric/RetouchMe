@@ -1,5 +1,6 @@
 package com.example.retake_lite.ui.edit
 
+import android.content.Intent
 import android.graphics.Matrix
 import android.os.Bundle
 import android.view.MotionEvent
@@ -9,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.retake_lite.databinding.ActivityRetakeEditBinding
 import com.example.retake_lite.face.FaceAdjustments
+import com.example.retake_lite.face.FaceMaskBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -245,8 +247,21 @@ class RetakeEditActivity : AppCompatActivity() {
             val finalBitmap = withContext(Dispatchers.Default) {
                 engine.render(auto, adjustments)
             }
-            RetakeEditSession.onApplied?.invoke(finalBitmap)
+            val faceMask = withContext(Dispatchers.Default) {
+                FaceMaskBuilder.createFaceMask(
+                    finalBitmap.width, finalBitmap.height, auto.targetFace,
+                    adjustments.edgeShrink,
+                    adjustments.edgeShrinkLeft, adjustments.edgeShrinkRight,
+                    adjustments.edgeShrinkTop, adjustments.edgeShrinkBottom
+                )
+            }
+            val onFinalApplied = RetakeEditSession.onApplied
             RetakeEditSession.clear()
+            PostProcessSession.start(finalBitmap, faceMask) { edited ->
+                onFinalApplied?.invoke(edited)
+            }
+            val intent = Intent(this@RetakeEditActivity, PostProcessActivity::class.java)
+            startActivity(intent)
             finish()
         }
     }

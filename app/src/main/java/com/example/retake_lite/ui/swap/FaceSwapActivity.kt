@@ -1,12 +1,9 @@
 package com.example.retake_lite.ui.swap
 
-import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -31,7 +28,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.OutputStream
 
 class FaceSwapActivity : AppCompatActivity() {
 
@@ -85,7 +81,6 @@ class FaceSwapActivity : AppCompatActivity() {
         binding.btnPickImage.setOnClickListener { pickImageLauncher.launch("image/*") }
         binding.btnAddSwap.setOnClickListener { addPendingSwap() }
         binding.btnSwap.setOnClickListener { performSwap() }
-        binding.btnSaveResult.setOnClickListener { saveResult() }
         binding.btnEditResult.setOnClickListener { openEditScreen() }
 
         // NUEVO: switch de selección automática. Requiere un
@@ -202,7 +197,6 @@ class FaceSwapActivity : AppCompatActivity() {
         selectedFaceIndex = -1
         selectedReferenceId = null
         binding.imageResult.visibility = View.GONE
-        binding.btnSaveResult.visibility = View.GONE
         binding.btnEditResult.visibility = View.GONE
         binding.cardSelection.visibility = View.GONE
         updatePendingVisibility()
@@ -363,14 +357,7 @@ class FaceSwapActivity : AppCompatActivity() {
             resultBitmap = result
             binding.imageResult.setImageBitmap(result)
             binding.imageResult.visibility = View.VISIBLE
-            binding.btnSaveResult.visibility = View.VISIBLE
-            // La edición manual post-procesamiento opera sobre UNA cara a la
-            // vez (FaceAdjustments no distingue entre varias caras de la
-            // misma imagen). Si el usuario hizo swap de varios rostros a la
-            // vez, se oculta el botón para evitar ambigüedad sobre cuál cara
-            // se editaría.
-            binding.btnEditResult.visibility =
-                if (lastAssignments.size == 1) View.VISIBLE else View.GONE
+            binding.btnEditResult.visibility = View.VISIBLE
             binding.progressBar.visibility = View.GONE
             binding.btnSwap.isEnabled = true
 
@@ -418,40 +405,6 @@ class FaceSwapActivity : AppCompatActivity() {
             }
 
             startActivity(Intent(this@FaceSwapActivity, RetakeEditActivity::class.java))
-        }
-    }
-
-    private fun saveResult() {
-        val bitmap = resultBitmap ?: return
-
-        val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "retake_swap_${System.currentTimeMillis()}.jpg")
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Retake_lite")
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            }
-        }
-
-        val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            ?: run {
-                Snackbar.make(binding.root, R.string.error_saving, Snackbar.LENGTH_SHORT).show()
-                return
-            }
-
-        try {
-            contentResolver.openOutputStream(uri)?.use { out: OutputStream ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                values.clear()
-                values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                contentResolver.update(uri, values, null, null)
-            }
-            Snackbar.make(binding.root, R.string.image_saved, Snackbar.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            contentResolver.delete(uri, null, null)
-            Snackbar.make(binding.root, R.string.error_saving, Snackbar.LENGTH_SHORT).show()
         }
     }
 
