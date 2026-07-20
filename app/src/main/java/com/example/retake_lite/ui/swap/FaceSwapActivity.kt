@@ -396,8 +396,9 @@ class FaceSwapActivity : AppCompatActivity() {
                 ?: withContext(Dispatchers.IO) { repository.getImagesForProfile(assignment.profileId) }
 
             val auto = withContext(Dispatchers.Default) {
+                val safeBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true) ?: return@withContext null
                 swapEngine.retakeEngine.computeAutoResult(
-                    bitmap, targetFace, assignment.profileId, images, assignment.referenceImageId
+                    safeBitmap, targetFace, assignment.profileId, images, assignment.referenceImageId
                 )
             }
             binding.progressBar.visibility = View.GONE

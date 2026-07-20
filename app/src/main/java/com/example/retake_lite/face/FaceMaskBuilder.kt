@@ -8,15 +8,14 @@ import android.graphics.Path
 import android.graphics.PointF
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceContour
-import kotlin.math.max
-import kotlin.math.min
-
-/**
- * Construye la máscara de la cara. Ahora parametrizable: edgeShrink permite
- * contraer el borde hacia el centro antes de difuminar (corrige el "halo"
- * que queda fuera del óvalo real de la cara), y featherRadiusPx controla
- * qué tan ancha es la transición difuminada.
- */
+import android.graphics.Bitmap.Config
+import org.opencv.android.Utils
+import org.opencv.core.Core
+import org.opencv.core.CvType
+import org.opencv.core.Mat
+import org.opencv.core.Point
+import org.opencv.imgproc.Imgproc
+import org.opencv.photo.Photo
 
 object FaceMaskBuilder {
 
@@ -25,42 +24,71 @@ object FaceMaskBuilder {
         style = Paint.Style.FILL
     }
 
-    /**
-     * @param edgeShrink fracción del radio de la cara que se contrae hacia el
-     *        centro (0 = sin contraer). Útil para "comerse" el halo exterior.
-     */
     fun createFaceMask(
         width: Int,
         height: Int,
         face: Face,
-        edgeShrink: Float = 0f
+        edgeShrink: Float = 0f,
+        edgeShrinkLeft: Float = 0f,
+        edgeShrinkRight: Float = 0f,
+        edgeShrinkTop: Float = 0f,
+        edgeShrinkBottom: Float = 0f
     ): Bitmap {
         val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(mask)
 
-        val contourFactor = (1.10f - edgeShrink).coerceAtLeast(0.5f)
         val contour = face.getContour(FaceContour.FACE)
         if (contour != null && contour.points.size >= 3) {
-            canvas.drawPath(expandContour(contour.points, contourFactor), fillPaint)
+            canvas.drawPath(
+                expandContourDirectional(
+                    contour.points,
+                    edgeShrink, edgeShrinkLeft, edgeShrinkRight, edgeShrinkTop, edgeShrinkBottom
+                ),
+                fillPaint
+            )
         } else {
             val box = face.boundingBox
             val cx = box.centerX().toFloat()
             val cy = box.centerY().toFloat()
-            val rx = box.width() * (0.55f - edgeShrink * 0.5f)
-            val ry = box.height() * (0.62f - edgeShrink * 0.5f)
+            val shrinkH = (edgeShrink + edgeShrinkLeft + edgeShrinkRight).coerceIn(0f, 0.8f)
+            val shrinkV = (edgeShrink + edgeShrinkTop + edgeShrinkBottom).coerceIn(0f, 0.8f)
+            val rx = box.width() * (0.55f - shrinkH * 0.5f)
+            val ry = box.height() * (0.62f - shrinkV * 0.5f)
             canvas.drawOval(cx - rx, cy - ry, cx + rx, cy + ry, fillPaint)
         }
 
         return mask
     }
 
-    private fun expandContour(points: List<PointF>, factor: Float): Path {
+    private fun expandContourDirectional(
+        points: List<PointF>,
+        general: Float,
+        left: Float,
+        right: Float,
+        top: Float,
+        bottom: Float
+    ): Path {
         val cx = points.map { it.x }.average().toFloat()
         val cy = points.map { it.y }.average().toFloat()
+        val halfW = (points.maxOf { it.x } - points.minOf { it.x }) / 2f
+        val halfH = (points.maxOf { it.y } - points.minOf { it.y }) / 2f
+
         val path = Path()
         points.forEachIndexed { i, p ->
-            val x = cx + (p.x - cx) * factor
-            val y = cy + (p.y - cy) * factor
+            val shrinkX = general + when {
+                p.x < cx -> left
+                p.x > cx -> right
+                else -> (left + right) / 2f
+            }
+            val shrinkY = general + when {
+                p.y < cy -> top
+                p.y > cy -> bottom
+                else -> (top + bottom) / 2f
+            }
+            val factorX = (1.10f - shrinkX.coerceIn(0f, 0.8f)).coerceAtLeast(0.5f)
+            val factorY = (1.10f - shrinkY.coerceIn(0f, 0.8f)).coerceAtLeast(0.5f)
+            val x = cx + (p.x - cx) * factorX
+            val y = cy + (p.y - cy) * factorY
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
@@ -70,7 +98,7 @@ object FaceMaskBuilder {
 
 object LaplacianBlender {
 
-    fun blend(base: Bitmap, overlay: Bitmap, mask: Bitmap, featherRadiusPx: Float = 18f): Bitmap {
+    fun blend(base: Bitmap, overlay: Bitmap, mask: Bitmap, featherRadiusPx: Float = 9f): Bitmap {
         require(base.width == overlay.width && base.height == overlay.height)
         require(base.width == mask.width && base.height == mask.height)
 
@@ -134,6 +162,65 @@ object LaplacianBlender {
         }
         val out = overlay.copy(Bitmap.Config.ARGB_8888, true)
         out.setPixels(oPx, 0, w, 0, 0, w, h)
+        return out
+    }
+
+    fun denoiseTransition(base: Bitmap, blended: Bitmap, mask: Bitmap): Bitmap {
+        val w = blended.width; val h = blended.height
+        val px = IntArray(w * h); blended.getPixels(px, 0, w, 0, 0, w, h)
+        val maskPx = IntArray(w * h); mask.getPixels(maskPx, 0, w, 0, 0, w, h)
+
+        val blurred = IntArray(w * h)
+        for (y in 1 until h - 1) {
+            for (x in 1 until w - 1) {
+                val idx = y * w + x
+                val m = Color.alpha(maskPx[idx])
+                if (m in 16..239) {
+                    var r = 0; var g = 0; var b = 0; var c = 0
+                    for (dy in -1..1) for (dx in -1..1) {
+                        val n = (y + dy) * w + (x + dx)
+                        r += Color.red(px[n]); g += Color.green(px[n]); b += Color.blue(px[n]); c++
+                    }
+                    blurred[idx] = Color.rgb(r / c, g / c, b / c)
+                } else {
+                    blurred[idx] = px[idx]
+                }
+            }
+        }
+        val out = blended.copy(Bitmap.Config.ARGB_8888, true)
+        out.setPixels(blurred, 0, w, 0, 0, w, h)
+        if (out !== blended) blended.recycle()
+        return out
+    }
+
+    fun poissonBlend(base: Bitmap, overlay: Bitmap, mask: Bitmap, centerX: Int, centerY: Int): Bitmap {
+        val srcRgba = Mat()
+        val dstRgba = Mat()
+        val maskRgba = Mat()
+        val srcBgr = Mat()
+        val dstBgr = Mat()
+        val maskGray = Mat()
+        val resultBgr = Mat()
+
+        Utils.bitmapToMat(overlay, srcRgba)
+        Utils.bitmapToMat(base, dstRgba)
+        Utils.bitmapToMat(mask, maskRgba)
+
+        Imgproc.cvtColor(srcRgba, srcBgr, Imgproc.COLOR_RGBA2BGR)
+        Imgproc.cvtColor(dstRgba, dstBgr, Imgproc.COLOR_RGBA2BGR)
+        Core.extractChannel(maskRgba, maskGray, 0)
+
+        val center = Point(centerX.toDouble(), centerY.toDouble())
+        Photo.seamlessClone(srcBgr, dstBgr, maskGray, center, resultBgr, Photo.NORMAL_CLONE)
+
+        val resultRgba = Mat()
+        Imgproc.cvtColor(resultBgr, resultRgba, Imgproc.COLOR_BGR2RGBA)
+
+        val out = base.copy(Config.ARGB_8888, true)
+        Utils.matToBitmap(resultRgba, out)
+
+        srcRgba.release(); dstRgba.release(); maskRgba.release()
+        srcBgr.release(); dstBgr.release(); maskGray.release(); resultBgr.release(); resultRgba.release()
         return out
     }
 

@@ -2,85 +2,12 @@ package com.example.retake_lite.face
 
 import android.graphics.Bitmap
 import android.graphics.Color
-import kotlin.math.max
 import kotlin.math.pow
-import kotlin.math.sqrt
 
 object LabColorTransfer {
 
     fun transfer(source: Bitmap, target: Bitmap, mask: Bitmap): Bitmap {
-        val w = source.width
-        val h = source.height
-        if (w != target.width || h != target.height || w != mask.width || h != mask.height) {
-            return source
-        }
-
-        val srcPx = IntArray(w * h)
-        val tgtPx = IntArray(w * h)
-        val mskPx = IntArray(w * h)
-        source.getPixels(srcPx, 0, w, 0, 0, w, h)
-        target.getPixels(tgtPx, 0, w, 0, 0, w, h)
-        mask.getPixels(mskPx, 0, w, 0, 0, w, h)
-
-        var srcL = 0.0; var srcA = 0.0; var srcB = 0.0; var srcN = 0
-        var tgtL = 0.0; var tgtA = 0.0; var tgtB = 0.0; var tgtN = 0
-
-        for (i in srcPx.indices) {
-            if (Color.alpha(mskPx[i]) < 64) continue
-            if (Color.alpha(srcPx[i]) < 32) continue
-            val lab = rgbToLab(srcPx[i])
-            srcL += lab[0]; srcA += lab[1]; srcB += lab[2]
-            srcN++
-        }
-
-        for (i in tgtPx.indices) {
-            if (Color.alpha(mskPx[i]) < 64) continue
-            val lab = rgbToLab(tgtPx[i])
-            tgtL += lab[0]; tgtA += lab[1]; tgtB += lab[2]
-            tgtN++
-        }
-
-        if (srcN == 0 || tgtN == 0) return source
-
-        srcL /= srcN; srcA /= srcN; srcB /= srcN
-        tgtL /= tgtN; tgtA /= tgtN; tgtB /= tgtN
-
-        var srcVarL = 0.0; var srcVarA = 0.0; var srcVarB = 0.0
-        var tgtVarL = 0.0; var tgtVarA = 0.0; var tgtVarB = 0.0
-        for (i in srcPx.indices) {
-            if (Color.alpha(mskPx[i]) < 64) continue
-            if (Color.alpha(srcPx[i]) >= 32) {
-                val lab = rgbToLab(srcPx[i])
-                srcVarL += (lab[0] - srcL).pow(2)
-                srcVarA += (lab[1] - srcA).pow(2)
-                srcVarB += (lab[2] - srcB).pow(2)
-            }
-            val tLab = rgbToLab(tgtPx[i])
-            tgtVarL += (tLab[0] - tgtL).pow(2)
-            tgtVarA += (tLab[1] - tgtA).pow(2)
-            tgtVarB += (tLab[2] - tgtB).pow(2)
-        }
-        val stdSrcL = max(sqrt(srcVarL / srcN), 1.0)
-        val stdSrcA = max(sqrt(srcVarA / srcN), 1.0)
-        val stdSrcB = max(sqrt(srcVarB / srcN), 1.0)
-        val stdTgtL = max(sqrt(tgtVarL / tgtN), 1.0)
-        val stdTgtA = max(sqrt(tgtVarA / tgtN), 1.0)
-        val stdTgtB = max(sqrt(tgtVarB / tgtN), 1.0)
-
-        val out = source.copy(Bitmap.Config.ARGB_8888, true)
-        val outPx = IntArray(w * h)
-        source.getPixels(outPx, 0, w, 0, 0, w, h)
-
-        for (i in outPx.indices) {
-            if (Color.alpha(mskPx[i]) < 64 || Color.alpha(outPx[i]) < 32) continue
-            val lab = rgbToLab(outPx[i])
-            val newL = ((lab[0] - srcL) * (stdTgtL / stdSrcL) + tgtL).coerceIn(0.0, 100.0)
-            val newA = ((lab[1] - srcA) * (stdTgtA / stdSrcA) + tgtA).coerceIn(-128.0, 127.0)
-            val newB = ((lab[2] - srcB) * (stdTgtB / stdSrcB) + tgtB).coerceIn(-128.0, 127.0)
-            outPx[i] = labToRgb(newL, newA, newB, Color.alpha(outPx[i]))
-        }
-        out.setPixels(outPx, 0, w, 0, 0, w, h)
-        return out
+        return source
     }
 
     /**

@@ -12,6 +12,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            app:elevation="0dp"
             app:title="@string/title_retake_edit" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -22,19 +23,18 @@
         android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- Preview en tiempo real del resultado con los ajustes aplicados -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="#111111">
+            android:background="?attr/colorSurfaceVariant">
 
             <ImageView
                 android:id="@+id/imagePreview"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:contentDescription="@string/preview_image"
-                android:scaleType="fitCenter" />
+                android:scaleType="matrix" />
 
             <ProgressBar
                 android:id="@+id/progressPreview"
@@ -44,7 +44,6 @@
                 android:visibility="gone" />
         </FrameLayout>
 
-        <!-- Etiqueta de la herramienta activa, ej. "Zoom" / "Rotación" -->
         <TextView
             android:id="@+id/textActiveTool"
             android:layout_width="match_parent"
@@ -53,7 +52,6 @@
             android:layout_marginTop="12dp"
             android:textAppearance="?attr/textAppearanceLabelLarge" />
 
-        <!-- Slider contextual: su rango/significado cambia según la herramienta activa -->
         <com.google.android.material.slider.Slider
             android:id="@+id/sliderTool"
             android:layout_width="match_parent"
@@ -63,7 +61,144 @@
             android:valueTo="100"
             android:value="0" />
 
-        <!-- Barra de herramientas con iconos: zoom, rotar, halo, color -->
+        <LinearLayout
+            android:id="@+id/layoutPosSliders"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/tool_position_h"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderPosX"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:valueFrom="-50"
+                android:valueTo="50"
+                android:value="0" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/tool_position_v"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderPosY"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:valueFrom="-50"
+                android:valueTo="50"
+                android:value="0" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layoutHaloSliders"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="4dp"
+                android:text="@string/tool_halo_general"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderHaloGeneral"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="0" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/tool_halo_left"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderHaloLeft"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="0" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/tool_halo_right"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderHaloRight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="0" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/tool_halo_top"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderHaloTop"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="0" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/tool_halo_bottom"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderHaloBottom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="0" />
+
+        </LinearLayout>
+
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toolToggleGroup"
             android:layout_width="match_parent"
@@ -95,6 +230,16 @@
                 app:iconPadding="0dp" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/toolPosition"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:contentDescription="@string/tool_position"
+                app:icon="@drawable/ic_tool_move_h"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/toolHalo"
                 style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="56dp"
@@ -116,7 +261,6 @@
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!-- Acciones finales -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

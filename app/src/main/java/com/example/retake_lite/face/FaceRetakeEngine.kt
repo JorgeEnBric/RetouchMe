@@ -3,7 +3,6 @@ package com.example.retake_lite.face
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import com.example.retake_lite.data.FaceImageEntity
@@ -100,33 +99,31 @@ class FaceRetakeEngine(
         val h = auto.targetBitmap.height
         val result = auto.targetBitmap.copy(Bitmap.Config.ARGB_8888, true)
 
-        val overlay = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        Canvas(overlay).drawColor(Color.TRANSPARENT)
+        val overlay = result.copy(Bitmap.Config.ARGB_8888, true)
         Canvas(overlay).drawBitmap(auto.sourceBitmap, matrix, drawPaint)
 
-        // edgeShrink corrige el halo: contrae el óvalo de la máscara hacia el
-        // centro antes de difuminar, "comiéndose" el borde problemático.
-        val mask = FaceMaskBuilder.createFaceMask(w, h, auto.targetFace, adjustments.edgeShrink)
-
-        val clipped = LaplacianBlender.clipOverlayToMask(overlay, mask)
-        if (clipped !== overlay) overlay.recycle()
-
-        val colorMatched = LabColorTransfer.transfer(clipped, result, mask)
-        if (colorMatched !== clipped) clipped.recycle()
+        val mask = FaceMaskBuilder.createFaceMask(
+            w, h, auto.targetFace,
+            adjustments.edgeShrink,
+            adjustments.edgeShrinkLeft,
+            adjustments.edgeShrinkRight,
+            adjustments.edgeShrinkTop,
+            adjustments.edgeShrinkBottom
+        )
 
         val manuallyShifted = LabColorTransfer.applyManualShift(
-            colorMatched, mask,
+            overlay, mask,
             adjustments.lightnessShift,
             adjustments.redGreenShift,
             adjustments.blueYellowShift
         )
-        if (manuallyShifted !== colorMatched) colorMatched.recycle()
+        if (manuallyShifted !== overlay) overlay.recycle()
 
-        val blended = LaplacianBlender.blend(result, manuallyShifted, mask, adjustments.featherRadiusPx)
-        manuallyShifted.recycle()
+        val finalBmp = LaplacianBlender.poissonBlend(result, manuallyShifted, mask, box.centerX(), box.centerY())
+        if (finalBmp !== manuallyShifted) manuallyShifted.recycle()
         mask.recycle()
 
-        return blended
+        return finalBmp
     }
 
     fun releaseAutoResult(auto: AutoRetakeResult) {

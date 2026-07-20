@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Retake_lite</string>
+    <string name="app_name">Retake</string>
     <string name="navigation_drawer_open">Abrir menú</string>
     <string name="navigation_drawer_close">Cerrar menú</string>
     <string name="nav_header_title">Retake Lite</string>
@@ -67,7 +67,15 @@
     <string name="preview_image">Vista previa del resultado</string>
     <string name="tool_zoom">Zoom</string>
     <string name="tool_rotate">Rotación</string>
+    <string name="tool_position">Posición</string>
+    <string name="tool_position_h">Horizontal</string>
+    <string name="tool_position_v">Vertical</string>
     <string name="tool_halo">Halo / borde</string>
+    <string name="tool_halo_general">General</string>
+    <string name="tool_halo_left">Izquierdo</string>
+    <string name="tool_halo_right">Derecho</string>
+    <string name="tool_halo_top">Superior</string>
+    <string name="tool_halo_bottom">Inferior</string>
     <string name="tool_color">Tono de piel</string>
     <string name="edit_result">Editar resultado</string>
     <string name="cancel">Cancelar</string>
