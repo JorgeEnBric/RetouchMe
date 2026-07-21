@@ -1,11 +1,24 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.Retake_lite" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/black</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    <style name="Theme.Retake_lite" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#FF6B9E7A</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">#FF3A6B4A</item>
+        <item name="colorOnPrimaryContainer">#FFD4E8D8</item>
+        <item name="colorSecondary">#FF80B890</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorSecondaryContainer">#FF2E5A3A</item>
+        <item name="colorOnSecondaryContainer">#FFE0F0E4</item>
+        <item name="colorTertiary">#FFA0D0A8</item>
+        <item name="colorOnTertiary">@color/white</item>
+        <item name="colorSurface">#FF0E1610</item>
+        <item name="colorOnSurface">#FFE0F0E4</item>
+        <item name="colorSurfaceVariant">#FF1A2418</item>
+        <item name="colorOnSurfaceVariant">#FFA0D0A8</item>
+        <item name="colorOutline">#FF5A8A68</item>
+        <item name="colorOutlineVariant">#FF3A6B4A</item>
+        <item name="android:statusBarColor">#FF1E3822</item>
+        <item name="android:navigationBarColor">#FF0E1610</item>
+        <item name="colorControlHighlight">#406B9E7A</item>
+        <item name="colorAccent">#FF6B9E7A</item>
     </style>
 </resources>

@@ -1,19 +1,19 @@
 <resources>
-    <string name="app_name">Retake_lite</string>
+    <string name="app_name">Retouch Me</string>
     <string name="navigation_drawer_open">Abrir menú</string>
     <string name="navigation_drawer_close">Cerrar menú</string>
-    <string name="nav_header_title">Retake Lite</string>
-    <string name="nav_header_subtitle">Intercambio de rostros</string>
+    <string name="nav_header_title">Retouch Me</string>
+    <string name="nav_header_subtitle">Mejora tus fotos con tu propio rostro</string>
     <string name="nav_header_desc">Encabezado de navegación</string>
     <string name="action_settings">Ajustes</string>
 
     <string name="menu_home">Inicio</string>
     <string name="menu_profiles">Perfiles de rostros</string>
-    <string name="menu_face_swap">Retake</string>
+    <string name="menu_face_swap">Retouch Me</string>
 
     <string name="title_profiles">Perfiles de rostros</string>
-    <string name="title_face_swap">Retake — Intercambiar rostro</string>
-    <string name="profiles_empty">No hay perfiles.\nPulsa + para crear uno y añade 8–12 fotos variadas (como en Retake).</string>
+    <string name="title_face_swap">Retouch Me</string>
+    <string name="profiles_empty">No hay perfiles.\nPulsa + para crear uno y añade 4 a 12 fotos variadas.</string>
     <string name="add_profile">Crear perfil</string>
     <string name="new_profile">Nuevo perfil</string>
     <string name="profile_name_hint">Nombre del perfil</string>
@@ -31,7 +31,7 @@
     <string name="faces_added">%1$d rostro(s) añadido(s)</string>
     <string name="no_faces_in_photos">No se detectaron rostros en las fotos seleccionadas</string>
 
-    <string name="pick_from_gallery">Cargar foto desde galería</string>
+    <string name="pick_from_gallery">Cargar foto a modificar</string>
     <string name="image_preview">Vista previa</string>
     <string name="tap_face_hint">Toca el rostro al que quieres aplicar el retake</string>
     <string name="no_faces_detected">No se detectaron rostros en esta imagen</string>
@@ -42,7 +42,7 @@
     <string name="pending_swaps">Intercambios pendientes</string>
     <string name="pending_swap_item">%1$s → %2$s</string>
     <string name="remove_pending_swap">Quitar intercambio</string>
-    <string name="apply_swaps">Aplicar retake</string>
+    <string name="apply_swaps">Incrustar rostro</string>
     <string name="select_face_first">Primero selecciona un rostro en la imagen</string>
     <string name="swap_added">Intercambio añadido a la lista</string>
     <string name="swap_faces">Intercambiar rostros</string>
@@ -53,23 +53,56 @@
     <string name="no_profiles_warning">Crea perfiles con fotos antes de intercambiar rostros</string>
     <string name="select_at_least_one_profile">Selecciona al menos un perfil para intercambiar</string>
     <string name="profile_has_no_faces">El perfil seleccionado no tiene rostros guardados</string>
-    <string name="swap_complete">Retake aplicado</string>
+    <string name="swap_complete">Retoque aplicado</string>
     <string name="error_loading_image">Error al cargar la imagen</string>
     <string name="error_saving">Error al guardar la imagen</string>
     <string name="image_saved">Imagen guardada en la galería</string>
 
-    <string name="home_title">Bienvenido a Retake Lite</string>
-    <string name="home_description">Crea un perfil con varias fotos (como Retake) y aplica un retake natural sobre rostros en otras imágenes.</string>
+    <string name="home_title">Bienvenido a Retouch Me</string>
+    <string name="home_description">Prepara tus mejores fotos y usalas para aplicar un retoque autentico sobre rostros de otras imágenes.</string>
     <string name="open_profiles">Gestionar perfiles</string>
-    <string name="open_face_swap">Aplicar retake</string>
+    <string name="open_face_swap">Incrustar rostro</string>
     <!-- Entradas de ajustes de Retake -->
-    <string name="title_retake_edit">Editar resultado</string>
+    <string name="title_retake_edit">Retocar</string>
     <string name="preview_image">Vista previa del resultado</string>
     <string name="tool_zoom">Zoom</string>
     <string name="tool_rotate">Rotación</string>
+    <string name="tool_position">Posición</string>
+    <string name="tool_position_h">Horizontal</string>
+    <string name="tool_position_v">Vertical</string>
+    <string name="title_post_process">Post-procesado</string>
+    <string name="post_face">Rostro</string>
+    <string name="post_global">General</string>
+    <string name="post_brightness">Brillo</string>
+    <string name="post_contrast">Contraste</string>
+    <string name="post_saturation">Saturación</string>
+    <string name="post_warmth">Temperatura</string>
+    <string name="post_gamma">Gamma</string>
+    <string name="post_sharpness">Nitidez</string>
+    <string name="post_apply_save">Guardar</string>
+    <string name="image_saved_toast">Imagen guardada en Pictures/Retouch Me</string>
+
     <string name="tool_halo">Halo / borde</string>
+    <string name="tool_halo_general">Borde general</string>
+    <string name="tool_halo_brush_hint">Mantén presionado para borrar el halo del borde</string>
+    <string name="tool_halo_paint_mode">Borrador activo</string>
+    <string name="tool_halo_radius">Radio del borrador</string>
+    <string name="tool_halo_close">Cerrar</string>
+    <string name="tool_halo_undo">Devolver halo</string>
     <string name="tool_color">Tono de piel</string>
+    <string name="tool_smooth">Suavizado</string>
+    <string name="tool_tone">Copiar tono</string>
+    <string name="tool_tone_radius">Tamaño pincel</string>
+    <string name="tool_tone_strength">Intensidad</string>
+    <string name="tool_tone_sample">Mantén presionado para muestrear el color de origen (vibración de confirmación)</string>
+    <string name="tool_tone_paint">Arrastra para aplicar el tono</string>
+    <string name="tool_tone_paint_mode">Activar pincel</string>
+    <string name="tool_tone_eraser">Borrador</string>
+    <string name="tool_tone_eraser_active">Modo borrador activo — arrastra para borrar tono</string>
+    <string name="tool_tone_close">Cerrar</string>
     <string name="edit_result">Editar resultado</string>
+    <string name="post_filters">Filtros</string>
+    <string name="continue_label">Continuar</string>
     <string name="cancel">Cancelar</string>
     <string name="apply">Aplicar</string>
 </resources>

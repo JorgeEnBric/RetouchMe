@@ -2,86 +2,345 @@ package com.example.retake_lite.face
 
 import android.graphics.Bitmap
 import android.graphics.Color
-import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sqrt
+import org.opencv.android.Utils
+import org.opencv.core.Core
+import org.opencv.core.Mat
+import org.opencv.imgproc.Imgproc
 
 object LabColorTransfer {
 
-    fun transfer(source: Bitmap, target: Bitmap, mask: Bitmap): Bitmap {
-        val w = source.width
-        val h = source.height
-        if (w != target.width || h != target.height || w != mask.width || h != mask.height) {
-            return source
-        }
-
-        val srcPx = IntArray(w * h)
-        val tgtPx = IntArray(w * h)
+    /**
+     * Corrección de crominancia (canales A y B en LAB).
+     * Ajusta solo el balance de color del rostro fuente para coincidir con
+     * el destino, pero PRESERVA la luminancia (canal L) del rostro fuente
+     * para no destruir su iluminación original.
+     */
+    fun statisticalTransfer(overlay: Bitmap, target: Bitmap, mask: Bitmap): Bitmap {
+        val w = overlay.width
+        val h = overlay.height
+        val ovPx = IntArray(w * h)
+        val tgPx = IntArray(w * h)
         val mskPx = IntArray(w * h)
-        source.getPixels(srcPx, 0, w, 0, 0, w, h)
-        target.getPixels(tgtPx, 0, w, 0, 0, w, h)
+        overlay.getPixels(ovPx, 0, w, 0, 0, w, h)
+        target.getPixels(tgPx, 0, w, 0, 0, w, h)
         mask.getPixels(mskPx, 0, w, 0, 0, w, h)
 
-        var srcL = 0.0; var srcA = 0.0; var srcB = 0.0; var srcN = 0
-        var tgtL = 0.0; var tgtA = 0.0; var tgtB = 0.0; var tgtN = 0
+        val MASK_THRESH = 128
+        var count = 0L
+        var sumSrcA = 0.0; var sumSrcB = 0.0
+        var sumDstA = 0.0; var sumDstB = 0.0
 
-        for (i in srcPx.indices) {
-            if (Color.alpha(mskPx[i]) < 64) continue
-            if (Color.alpha(srcPx[i]) < 32) continue
-            val lab = rgbToLab(srcPx[i])
-            srcL += lab[0]; srcA += lab[1]; srcB += lab[2]
-            srcN++
+        // Media de crominancia (A, B) del overlay y del destino
+        for (i in ovPx.indices) {
+            if (Color.alpha(mskPx[i]) < MASK_THRESH) continue
+            val labSrc = rgbToLab(ovPx[i])
+            val labDst = rgbToLab(tgPx[i])
+            sumSrcA += labSrc[1]; sumSrcB += labSrc[2]
+            sumDstA += labDst[1]; sumDstB += labDst[2]
+            count++
         }
+        if (count == 0L) return overlay
 
-        for (i in tgtPx.indices) {
-            if (Color.alpha(mskPx[i]) < 64) continue
-            val lab = rgbToLab(tgtPx[i])
-            tgtL += lab[0]; tgtA += lab[1]; tgtB += lab[2]
-            tgtN++
-        }
+        val meanSrcA = (sumSrcA / count).toFloat()
+        val meanSrcB = (sumSrcB / count).toFloat()
+        val meanDstA = (sumDstA / count).toFloat()
+        val meanDstB = (sumDstB / count).toFloat()
 
-        if (srcN == 0 || tgtN == 0) return source
+        // Delta de crominancia: lo que hay que sumar al fuente para igualar al destino
+        val deltaA = meanDstA - meanSrcA
+        val deltaB = meanDstB - meanSrcB
+        if (deltaA == 0f && deltaB == 0f) return overlay
 
-        srcL /= srcN; srcA /= srcN; srcB /= srcN
-        tgtL /= tgtN; tgtA /= tgtN; tgtB /= tgtN
-
-        var srcVarL = 0.0; var srcVarA = 0.0; var srcVarB = 0.0
-        var tgtVarL = 0.0; var tgtVarA = 0.0; var tgtVarB = 0.0
-        for (i in srcPx.indices) {
-            if (Color.alpha(mskPx[i]) < 64) continue
-            if (Color.alpha(srcPx[i]) >= 32) {
-                val lab = rgbToLab(srcPx[i])
-                srcVarL += (lab[0] - srcL).pow(2)
-                srcVarA += (lab[1] - srcA).pow(2)
-                srcVarB += (lab[2] - srcB).pow(2)
+        // Aplicar corrección píxel a píxel solo donde la máscara tenga peso
+        val out = IntArray(w * h)
+        for (i in ovPx.indices) {
+            val m = Color.alpha(mskPx[i])
+            if (m < 8) {
+                out[i] = ovPx[i]
+                continue
             }
-            val tLab = rgbToLab(tgtPx[i])
-            tgtVarL += (tLab[0] - tgtL).pow(2)
-            tgtVarA += (tLab[1] - tgtA).pow(2)
-            tgtVarB += (tLab[2] - tgtB).pow(2)
-        }
-        val stdSrcL = max(sqrt(srcVarL / srcN), 1.0)
-        val stdSrcA = max(sqrt(srcVarA / srcN), 1.0)
-        val stdSrcB = max(sqrt(srcVarB / srcN), 1.0)
-        val stdTgtL = max(sqrt(tgtVarL / tgtN), 1.0)
-        val stdTgtA = max(sqrt(tgtVarA / tgtN), 1.0)
-        val stdTgtB = max(sqrt(tgtVarB / tgtN), 1.0)
+            val lab = rgbToLab(ovPx[i])
+            val strength = (m / 255f).toFloat()
 
-        val out = source.copy(Bitmap.Config.ARGB_8888, true)
-        val outPx = IntArray(w * h)
-        source.getPixels(outPx, 0, w, 0, 0, w, h)
-
-        for (i in outPx.indices) {
-            if (Color.alpha(mskPx[i]) < 64 || Color.alpha(outPx[i]) < 32) continue
-            val lab = rgbToLab(outPx[i])
-            val newL = ((lab[0] - srcL) * (stdTgtL / stdSrcL) + tgtL).coerceIn(0.0, 100.0)
-            val newA = ((lab[1] - srcA) * (stdTgtA / stdSrcA) + tgtA).coerceIn(-128.0, 127.0)
-            val newB = ((lab[2] - srcB) * (stdTgtB / stdSrcB) + tgtB).coerceIn(-128.0, 127.0)
-            outPx[i] = labToRgb(newL, newA, newB, Color.alpha(outPx[i]))
+            val newA = (lab[1] + deltaA * strength).coerceIn(-128.0, 127.0)
+            val newB = (lab[2] + deltaB * strength).coerceIn(-128.0, 127.0)
+            // L se conserva tal cual del overlay (luminancia fuente)
+            out[i] = labToRgb(lab[0], newA, newB, Color.alpha(ovPx[i]))
         }
-        out.setPixels(outPx, 0, w, 0, 0, w, h)
+
+        val result = overlay.copy(Bitmap.Config.ARGB_8888, true)
+        result.setPixels(out, 0, w, 0, 0, w, h)
+        return result
+    }
+
+    /**
+     * Variante de [statisticalTransfer] pensada para el flujo de "Retake":
+     * la foto destino puede tener, justo en el área de la máscara, el
+     * mismo rostro con el problema de tono que el usuario quiere corregir
+     * (por eso lo está reemplazando). Usar ESE rostro como referencia de
+     * color -como hace statisticalTransfer()- hace que el rostro nuevo
+     * (bueno) se ajuste para igualar el tono malo del rostro viejo,
+     * anulando la corrección.
+     *
+     * En vez de eso, esta función mide el color de referencia en un
+     * ANILLO de piel real alrededor de la máscara (frente, mejillas,
+     * mandíbula, cuello) — zona visible en la foto destino que refleja
+     * la iluminación real de esa foto sin heredar el defecto puntual
+     * del rostro que se va a tapar.
+     *
+     * @param faceMask máscara de la cara (donde se pinta el resultado).
+     * @param ringWidthPx grosor del anillo de muestreo alrededor de la máscara.
+     */
+    fun statisticalTransferToSurroundingSkin(
+        overlay: Bitmap,
+        target: Bitmap,
+        faceMask: Bitmap,
+        ringWidthPx: Int
+    ): Bitmap {
+        val ring = buildRingMask(faceMask, ringWidthPx)
+        try {
+            return statisticalTransferWithMasks(overlay, target, sourceMask = faceMask, referenceMask = ring)
+        } finally {
+            ring.recycle()
+        }
+    }
+
+    /**
+     * Núcleo compartido: mide la crominancia media del ORIGEN dentro de
+     * [sourceMask] y la del DESTINO dentro de [referenceMask] (pueden ser
+     * máscaras distintas), y desplaza el origen para igualar esa media,
+     * preservando su luminancia. La corrección se pinta únicamente donde
+     * [sourceMask] tiene peso.
+     */
+    private fun statisticalTransferWithMasks(
+        overlay: Bitmap,
+        target: Bitmap,
+        sourceMask: Bitmap,
+        referenceMask: Bitmap
+    ): Bitmap {
+        val w = overlay.width
+        val h = overlay.height
+        val ovPx = IntArray(w * h)
+        val tgPx = IntArray(w * h)
+        val srcMaskPx = IntArray(w * h)
+        val refMaskPx = IntArray(w * h)
+        overlay.getPixels(ovPx, 0, w, 0, 0, w, h)
+        target.getPixels(tgPx, 0, w, 0, 0, w, h)
+        sourceMask.getPixels(srcMaskPx, 0, w, 0, 0, w, h)
+        referenceMask.getPixels(refMaskPx, 0, w, 0, 0, w, h)
+
+        val MASK_THRESH = 128
+
+        var srcCount = 0L
+        var sumSrcA = 0.0; var sumSrcB = 0.0
+        for (i in ovPx.indices) {
+            if (Color.alpha(srcMaskPx[i]) < MASK_THRESH) continue
+            val lab = rgbToLab(ovPx[i])
+            sumSrcA += lab[1]; sumSrcB += lab[2]
+            srcCount++
+        }
+        if (srcCount == 0L) return overlay
+
+        var refCount = 0L
+        var sumRefA = 0.0; var sumRefB = 0.0
+        for (i in tgPx.indices) {
+            if (Color.alpha(refMaskPx[i]) < MASK_THRESH) continue
+            val lab = rgbToLab(tgPx[i])
+            sumRefA += lab[1]; sumRefB += lab[2]
+            refCount++
+        }
+        // Si no hay suficiente piel de referencia visible (p. ej. cara pegada
+        // al borde de la imagen), no forzamos ningún cambio de color.
+        if (refCount == 0L) return overlay
+
+        val meanSrcA = (sumSrcA / srcCount).toFloat()
+        val meanSrcB = (sumSrcB / srcCount).toFloat()
+        val meanRefA = (sumRefA / refCount).toFloat()
+        val meanRefB = (sumRefB / refCount).toFloat()
+
+        val deltaA = meanRefA - meanSrcA
+        val deltaB = meanRefB - meanSrcB
+        if (deltaA == 0f && deltaB == 0f) return overlay
+
+        val out = IntArray(w * h)
+        for (i in ovPx.indices) {
+            val m = Color.alpha(srcMaskPx[i])
+            if (m < 8) {
+                out[i] = ovPx[i]
+                continue
+            }
+            val lab = rgbToLab(ovPx[i])
+            val strength = m / 255f
+            val newA = (lab[1] + deltaA * strength).coerceIn(-128.0, 127.0)
+            val newB = (lab[2] + deltaB * strength).coerceIn(-128.0, 127.0)
+            out[i] = labToRgb(lab[0], newA, newB, Color.alpha(ovPx[i]))
+        }
+
+        val result = overlay.copy(Bitmap.Config.ARGB_8888, true)
+        result.setPixels(out, 0, w, 0, 0, w, h)
+        return result
+    }
+
+    /**
+     * Construye una máscara "anillo": dilata [faceMask] por [ringWidthPx] y
+     * le resta la máscara original, dejando solo el borde exterior. Esa
+     * franja cae sobre piel real (o pelo/fondo en los extremos, que se
+     * promedian pero pesan poco frente a la piel dominante del anillo).
+     */
+    private fun buildRingMask(faceMask: Bitmap, ringWidthPx: Int): Bitmap {
+        val w = faceMask.width
+        val h = faceMask.height
+
+        val maskRgba = Mat()
+        Utils.bitmapToMat(faceMask, maskRgba)
+
+        val alphaChannel = Mat()
+        Core.extractChannel(maskRgba, alphaChannel, 3)
+
+        val kernelSize = (ringWidthPx * 2 + 1).coerceAtLeast(3)
+        val kernel = Imgproc.getStructuringElement(
+            Imgproc.MORPH_ELLIPSE,
+            org.opencv.core.Size(kernelSize.toDouble(), kernelSize.toDouble())
+        )
+        val dilated = Mat()
+        Imgproc.dilate(alphaChannel, dilated, kernel)
+
+        val ringAlpha = Mat()
+        Core.subtract(dilated, alphaChannel, ringAlpha)
+
+        val ringBytes = ByteArray(w * h)
+        ringAlpha.get(0, 0, ringBytes)
+
+        val ringPx = IntArray(w * h)
+        for (i in ringPx.indices) {
+            val a = ringBytes[i].toInt() and 0xFF
+            ringPx[i] = Color.argb(a, 255, 255, 255)
+        }
+
+        val ringBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        ringBitmap.setPixels(ringPx, 0, w, 0, 0, w, h)
+
+        maskRgba.release(); alphaChannel.release()
+        kernel.release(); dilated.release(); ringAlpha.release()
+
+        return ringBitmap
+    }
+
+    /**
+     * Post-proceso de tono/iluminación: fuerza que la región incrustada en
+     * [compositeOverlay] (ya deformada y pegada, dentro de [faceMask]) tenga
+     * EXACTAMENTE las mismas estadísticas de color — media Y desviación
+     * estándar de L, A y B — que la foto de referencia original elegida por
+     * el usuario ([referenceBitmap], dentro de su propio [referenceMask]).
+     *
+     * A diferencia de statisticalTransfer/statisticalTransferToSurroundingSkin,
+     * esta función NO usa la foto destino como objetivo en absoluto — usa
+     * únicamente la imagen de referencia como fuente de verdad del tono e
+     * iluminación, así que no puede fallar por elegir mal el objetivo. Al
+     * igualar también la desviación estándar (no solo la media) reproduce
+     * el contraste de luces/sombras original de la referencia, no solo su
+     * color promedio — esto es lo que hace que la iluminación (no solo el
+     * tono) también se preserve.
+     *
+     * @param compositeOverlay bitmap con el rostro ya deformado/pegado (mismo
+     *   tamaño que la imagen destino), el que se está construyendo en render().
+     * @param faceMask máscara de la cara en el destino (mismo tamaño que compositeOverlay).
+     * @param referenceBitmap la foto de referencia ORIGINAL sin deformar (auto.sourceBitmap).
+     * @param referenceMask máscara de la cara dentro de referenceBitmap (su propio tamaño).
+     */
+    fun matchReferenceTone(
+        compositeOverlay: Bitmap,
+        faceMask: Bitmap,
+        referenceBitmap: Bitmap,
+        referenceMask: Bitmap
+    ): Bitmap {
+        val refStats = labStats(referenceBitmap, referenceMask) ?: return compositeOverlay
+        val curStats = labStats(compositeOverlay, faceMask) ?: return compositeOverlay
+
+        val w = compositeOverlay.width
+        val h = compositeOverlay.height
+        val px = IntArray(w * h)
+        val maskPx = IntArray(w * h)
+        compositeOverlay.getPixels(px, 0, w, 0, 0, w, h)
+        faceMask.getPixels(maskPx, 0, w, 0, 0, w, h)
+
+        for (i in px.indices) {
+            val m = Color.alpha(maskPx[i])
+            if (m < 8) continue
+            val a = Color.alpha(px[i])
+            if (a < 8) continue
+
+            val lab = rgbToLab(px[i])
+            val strength = m / 255f
+
+            val targetL = normalize(lab[0], curStats.meanL, curStats.stdL, refStats.meanL, refStats.stdL)
+            val targetA = normalize(lab[1], curStats.meanA, curStats.stdA, refStats.meanA, refStats.stdA)
+            val targetB = normalize(lab[2], curStats.meanB, curStats.stdB, refStats.meanB, refStats.stdB)
+
+            // Se atenúa con la fuerza de la máscara para que el efecto se
+            // desvanezca suavemente hacia el borde difuminado.
+            val newL = lerpD(lab[0], targetL, strength).coerceIn(0.0, 100.0)
+            val newA = lerpD(lab[1], targetA, strength).coerceIn(-128.0, 127.0)
+            val newB = lerpD(lab[2], targetB, strength).coerceIn(-128.0, 127.0)
+
+            px[i] = labToRgb(newL, newA, newB, a)
+        }
+
+        val out = compositeOverlay.copy(Bitmap.Config.ARGB_8888, true)
+        out.setPixels(px, 0, w, 0, 0, w, h)
         return out
     }
+
+    private data class LabStats(
+        val meanL: Double, val stdL: Double,
+        val meanA: Double, val stdA: Double,
+        val meanB: Double, val stdB: Double
+    )
+
+    private fun labStats(bitmap: Bitmap, mask: Bitmap): LabStats? {
+        val w = bitmap.width
+        val h = bitmap.height
+        val px = IntArray(w * h)
+        val maskPx = IntArray(w * h)
+        bitmap.getPixels(px, 0, w, 0, 0, w, h)
+        mask.getPixels(maskPx, 0, w, 0, 0, w, h)
+
+        val labs = ArrayList<DoubleArray>()
+        var sumL = 0.0; var sumA = 0.0; var sumB = 0.0
+        for (i in px.indices) {
+            if (Color.alpha(maskPx[i]) < 128) continue
+            val lab = rgbToLab(px[i])
+            labs.add(lab)
+            sumL += lab[0]; sumA += lab[1]; sumB += lab[2]
+        }
+        val n = labs.size
+        if (n == 0) return null
+
+        val meanL = sumL / n
+        val meanA = sumA / n
+        val meanB = sumB / n
+
+        var varL = 0.0; var varA = 0.0; var varB = 0.0
+        for (lab in labs) {
+            varL += (lab[0] - meanL).pow(2)
+            varA += (lab[1] - meanA).pow(2)
+            varB += (lab[2] - meanB).pow(2)
+        }
+        varL /= n; varA /= n; varB /= n
+
+        return LabStats(meanL, sqrt(varL), meanA, sqrt(varA), meanB, sqrt(varB))
+    }
+
+    /** Reescala `value` de la distribución (curMean, curStd) a (refMean, refStd), estilo Reinhard. */
+    private fun normalize(value: Double, curMean: Double, curStd: Double, refMean: Double, refStd: Double): Double {
+        if (curStd < 1e-3) return value
+        val z = (value - curMean) / curStd
+        return refMean + z * refStd
+    }
+
+    private fun lerpD(a: Double, b: Double, t: Float): Double = a + (b - a) * t
 
     /**
      * Corrección MANUAL adicional, aplicada después de la automática.
@@ -91,6 +350,50 @@ object LabColorTransfer {
      *
      * @param mask limita el área afectada (la misma máscara de la cara).
      */
+    fun matchRgb(overlay: Bitmap, target: Bitmap, mask: Bitmap) {
+        val w = overlay.width
+        val h = overlay.height
+        val ovPx = IntArray(w * h)
+        val tgPx = IntArray(w * h)
+        val mskPx = IntArray(w * h)
+        overlay.getPixels(ovPx, 0, w, 0, 0, w, h)
+        target.getPixels(tgPx, 0, w, 0, 0, w, h)
+        mask.getPixels(mskPx, 0, w, 0, 0, w, h)
+
+        var count = 0L
+        var sR = 0L; var sG = 0L; var sB = 0L
+        var dR = 0L; var dG = 0L; var dB = 0L
+
+        for (i in ovPx.indices) {
+            val m = Color.alpha(mskPx[i])
+            if (m < 128) continue
+            val a = Color.alpha(ovPx[i])
+            if (a < 8) continue
+            sR += Color.red(ovPx[i]); sG += Color.green(ovPx[i]); sB += Color.blue(ovPx[i])
+            dR += Color.red(tgPx[i]); dG += Color.green(tgPx[i]); dB += Color.blue(tgPx[i])
+            count++
+        }
+        if (count == 0L) return
+
+        val offR = (dR / count - sR / count).toInt()
+        val offG = (dG / count - sG / count).toInt()
+        val offB = (dB / count - sB / count).toInt()
+        if (offR == 0 && offG == 0 && offB == 0) return
+
+        for (i in ovPx.indices) {
+            val m = Color.alpha(mskPx[i])
+            if (m < 8) continue
+            val a = Color.alpha(ovPx[i])
+            if (a < 8) continue
+            val f = m / 255f
+            val nr = (Color.red(ovPx[i]) + offR * f).toInt().coerceIn(0, 255)
+            val ng = (Color.green(ovPx[i]) + offG * f).toInt().coerceIn(0, 255)
+            val nb = (Color.blue(ovPx[i]) + offB * f).toInt().coerceIn(0, 255)
+            ovPx[i] = Color.argb(a, nr, ng, nb)
+        }
+        overlay.setPixels(ovPx, 0, w, 0, 0, w, h)
+    }
+
     fun applyManualShift(
         bitmap: Bitmap,
         mask: Bitmap,

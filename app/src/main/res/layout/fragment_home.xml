@@ -1,12 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
-    android:padding="24dp"
+    android:padding="32dp"
     tools:context=".ui.home.HomeFragment">
+
+    <ImageView
+        android:id="@+id/imageAppIcon"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_marginBottom="24dp"
+        android:contentDescription="@string/nav_header_desc"
+        android:clipToOutline="true"
+        android:background="@drawable/circle_bg"
+        app:srcCompat="@mipmap/ic_launcher_round" />
 
     <TextView
         android:id="@+id/text_home_title"
@@ -27,9 +37,10 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnOpenProfiles"
+        style="@style/Widget.Material3.Button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="32dp"
         android:text="@string/open_profiles" />
 
     <com.google.android.material.button.MaterialButton
@@ -37,7 +48,7 @@
         style="@style/Widget.Material3.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:text="@string/open_face_swap" />
 
 </LinearLayout>

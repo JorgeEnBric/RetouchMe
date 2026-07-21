@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="72dp"
@@ -11,8 +10,8 @@
         android:layout_height="match_parent"
         android:contentDescription="@string/face_thumbnail"
         android:scaleType="centerCrop"
-        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Small"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
         app:strokeColor="?attr/colorPrimary"
-        app:strokeWidth="0dp" />
+        app:strokeWidth="2dp" />
 
 </FrameLayout>

@@ -12,6 +12,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            app:elevation="0dp"
             app:title="@string/title_face_swap" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -38,7 +39,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="320dp"
                 android:layout_marginTop="12dp"
-                android:background="#EEEEEE"
+                android:background="?attr/colorSurfaceVariant"
                 android:contentDescription="@string/image_preview" />
 
             <TextView
@@ -152,19 +153,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="320dp"
                 android:layout_marginTop="16dp"
-                android:background="#EEEEEE"
+                android:background="?attr/colorSurfaceVariant"
                 android:contentDescription="@string/result_image"
                 android:scaleType="fitCenter"
                 android:visibility="gone" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSaveResult"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/save_result"
-                android:visibility="gone" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnEditResult"
                 android:layout_width="match_parent"
