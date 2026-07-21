@@ -83,11 +83,12 @@
     <string name="image_saved_toast">Imagen guardada en Pictures/RetouchMe</string>
 
     <string name="tool_halo">Halo / borde</string>
-    <string name="tool_halo_general">General</string>
-    <string name="tool_halo_left">Izquierdo</string>
-    <string name="tool_halo_right">Derecho</string>
-    <string name="tool_halo_top">Superior</string>
-    <string name="tool_halo_bottom">Inferior</string>
+    <string name="tool_halo_general">Borde general</string>
+    <string name="tool_halo_brush_hint">Mantén presionado para borrar el halo del borde</string>
+    <string name="tool_halo_paint_mode">Activar borrador</string>
+    <string name="tool_halo_radius">Radio del borrador</string>
+    <string name="tool_halo_close">Cerrar</string>
+    <string name="tool_halo_undo">Devolver halo</string>
     <string name="tool_color">Tono de piel</string>
     <string name="tool_smooth">Suavizado</string>
     <string name="tool_tone">Copiar tono</string>

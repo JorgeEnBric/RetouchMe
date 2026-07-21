@@ -66,6 +66,15 @@ class RetakeEditActivity : AppCompatActivity() {
         scheduleRender()
     }
 
+    private var haloEraseMask: Bitmap? = null
+    private var haloEraseCanvas: Canvas? = null
+    private var haloIsPainting = false
+    private var haloLastX = -1f
+    private var haloLastY = -1f
+    private var haloDownX = -1f
+    private var haloDownY = -1f
+    private val haloUndoStack = mutableListOf<Bitmap>()
+
     private enum class Tool { ZOOM, ROTATE, POSITION, HALO, COLOR, TONE }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,7 +144,9 @@ class RetakeEditActivity : AppCompatActivity() {
         })
 
         binding.imagePreview.setOnTouchListener { _, event ->
-            if (binding.switchTonePaint.isChecked) {
+            if (binding.switchHaloPaint.isChecked) {
+                handleHaloTouch(event)
+            } else if (binding.switchTonePaint.isChecked) {
                 handleToneTouch(event)
             } else {
                 scaleDetector?.onTouchEvent(event)
@@ -191,6 +202,68 @@ class RetakeEditActivity : AppCompatActivity() {
         }
     }
 
+    private fun handleHaloTouch(event: MotionEvent) {
+        val bmp = (binding.imagePreview.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap ?: return
+        if (haloEraseMask == null || haloEraseMask!!.width != bmp.width || haloEraseMask!!.height != bmp.height) {
+            haloEraseMask = Bitmap.createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
+            haloEraseCanvas = Canvas(haloEraseMask!!)
+        }
+
+        val p = screenToBitmap(event.x, event.y)
+        binding.toneCursor.cursorX = event.x
+        binding.toneCursor.cursorY = event.y
+        binding.toneCursor.cursorRadius = adjustments.haloBrushRadius
+        binding.toneCursor.isErasing = true
+        binding.toneCursor.invalidate()
+
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                haloDownX = event.x; haloDownY = event.y
+                haloIsPainting = false
+                haloLastX = -1f
+                if (haloEraseMask != null) {
+                    val snapshot = haloEraseMask!!.copy(Bitmap.Config.ARGB_8888, true)
+                    if (haloUndoStack.size >= 20) {
+                        haloUndoStack.removeFirst().recycle()
+                    }
+                    haloUndoStack.add(snapshot)
+                }
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val dx = event.x - haloDownX; val dy = event.y - haloDownY
+                val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                if (dist > 15f) {
+                    haloIsPainting = true
+                    if (haloLastX < 0) { haloLastX = p.x; haloLastY = p.y }
+                    val steps = (dist / 5f).toInt().coerceIn(1, 20)
+                    for (i in 1..steps) {
+                        val t = i.toFloat() / steps
+                        val ix = haloLastX + (p.x - haloLastX) * t
+                        val iy = haloLastY + (p.y - haloLastY) * t
+                        eraseHalo(ix, iy)
+                    }
+                    haloLastX = p.x; haloLastY = p.y
+                    scheduleRender()
+                }
+            }
+            MotionEvent.ACTION_UP -> {
+                haloIsPainting = false
+                haloLastX = -1f
+                binding.toneCursor.isErasing = false
+                binding.toneCursor.invalidate()
+            }
+        }
+    }
+
+    private fun eraseHalo(bmpX: Float, bmpY: Float) {
+        val canvas = haloEraseCanvas ?: return
+        val paint = Paint().apply {
+            color = Color.WHITE
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(bmpX, bmpY, adjustments.haloBrushRadius, paint)
+    }
+
     private fun fitCenterMatrix(bmpW: Int, bmpH: Int, viewW: Int, viewH: Int, zoom: Float = 1.5f): Matrix {
         val m = Matrix()
         val baseScale = kotlin.math.min(viewW.toFloat() / bmpW, viewH.toFloat() / bmpH) * zoom
@@ -208,7 +281,8 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.layoutHaloSliders.visibility = View.GONE
         binding.layoutColorSliders.visibility = View.GONE
         binding.layoutTonePanel.visibility = View.GONE
-        if (tool != Tool.TONE) binding.toneCursor.visibility = View.GONE
+        binding.toneCursor.visibility = View.GONE
+        binding.toneCursor.isErasing = false
 
         when (tool) {
             Tool.ZOOM -> {
@@ -238,11 +312,11 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_halo)
                 binding.layoutHaloSliders.visibility = View.VISIBLE
                 binding.sliderHaloGeneral.value = adjustments.edgeShrink * 100f
-                binding.sliderHaloLeft.value = adjustments.edgeShrinkLeft * 100f
-                binding.sliderHaloRight.value = adjustments.edgeShrinkRight * 100f
-                binding.sliderHaloTop.value = adjustments.edgeShrinkTop * 100f
-                binding.sliderHaloBottom.value = adjustments.edgeShrinkBottom * 100f
                 binding.toolToggleGroup.check(binding.toolHalo.id)
+                binding.toneCursor.visibility = View.VISIBLE
+                binding.toneCursor.cursorRadius = adjustments.haloBrushRadius
+                binding.toneCursor.isErasing = binding.switchHaloPaint.isChecked
+                binding.toneCursor.invalidate()
             }
             Tool.COLOR -> {
                 binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_color)
@@ -297,25 +371,27 @@ class RetakeEditActivity : AppCompatActivity() {
             adjustments = adjustments.copy(edgeShrink = value / 100f)
             scheduleRender()
         }
-        binding.sliderHaloLeft.addOnChangeListener { _, value, fromUser ->
+        binding.sliderHaloRadius.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
-            adjustments = adjustments.copy(edgeShrinkLeft = value / 100f)
-            scheduleRender()
+            adjustments = adjustments.copy(haloBrushRadius = value)
         }
-        binding.sliderHaloRight.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser) return@addOnChangeListener
-            adjustments = adjustments.copy(edgeShrinkRight = value / 100f)
-            scheduleRender()
+        binding.switchHaloPaint.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                binding.textHaloStatus.setText(R.string.tool_halo_paint_mode)
+            } else {
+                binding.textHaloStatus.setText(R.string.tool_halo_brush_hint)
+            }
         }
-        binding.sliderHaloTop.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser) return@addOnChangeListener
-            adjustments = adjustments.copy(edgeShrinkTop = value / 100f)
-            scheduleRender()
+        binding.btnHaloClose.setOnClickListener {
+            binding.layoutHaloSliders.visibility = View.GONE
         }
-        binding.sliderHaloBottom.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser) return@addOnChangeListener
-            adjustments = adjustments.copy(edgeShrinkBottom = value / 100f)
-            scheduleRender()
+        binding.btnHaloUndo.setOnClickListener {
+            if (haloUndoStack.isNotEmpty()) {
+                haloEraseMask?.recycle()
+                haloEraseMask = haloUndoStack.removeLast()
+                haloEraseCanvas = haloEraseMask?.let { Canvas(it) }
+                scheduleRender()
+            }
         }
     }
 
@@ -581,14 +657,13 @@ class RetakeEditActivity : AppCompatActivity() {
 
             binding.progressPreview.visibility = View.VISIBLE
             val swapBitmap = withContext(Dispatchers.Default) {
-                engine.render(auto, adjustments)
+                engine.render(auto, adjustments, haloEraseMask)
             }
             val mask = withContext(Dispatchers.Default) {
                 FaceMaskBuilder.createFaceMask(
                     swapBitmap.width, swapBitmap.height, auto.targetFace,
                     adjustments.edgeShrink,
-                    adjustments.edgeShrinkLeft, adjustments.edgeShrinkRight,
-                    adjustments.edgeShrinkTop, adjustments.edgeShrinkBottom
+                    haloEraseMask
                 )
             }
             val filtered = withContext(Dispatchers.Default) {
@@ -618,14 +693,13 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.progressPreview.visibility = View.VISIBLE
         lifecycleScope.launch {
             val swapBitmap = withContext(Dispatchers.Default) {
-                engine.render(auto, adjustments)
+                engine.render(auto, adjustments, haloEraseMask)
             }
             val mask = withContext(Dispatchers.Default) {
                 FaceMaskBuilder.createFaceMask(
                     swapBitmap.width, swapBitmap.height, auto.targetFace,
                     adjustments.edgeShrink,
-                    adjustments.edgeShrinkLeft, adjustments.edgeShrinkRight,
-                    adjustments.edgeShrinkTop, adjustments.edgeShrinkBottom
+                    haloEraseMask
                 )
             }
             val filtered = withContext(Dispatchers.Default) {

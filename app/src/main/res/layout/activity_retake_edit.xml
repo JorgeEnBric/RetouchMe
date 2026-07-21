@@ -136,72 +136,67 @@
                 android:value="0" />
 
             <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/tool_halo_left"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="12sp" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderHaloLeft"
+                android:id="@+id/textHaloStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
-                android:valueFrom="0"
-                android:valueTo="100"
-                android:value="0" />
+                android:layout_marginTop="8dp"
+                android:text="@string/tool_halo_brush_hint"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchHaloPaint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/tool_halo_paint_mode"
+                android:checked="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHaloUndo"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/tool_halo_undo" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="@string/tool_halo_right"
+                android:layout_marginTop="8dp"
+                android:text="@string/tool_halo_radius"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
                 android:textSize="12sp" />
 
             <com.google.android.material.slider.Slider
-                android:id="@+id/sliderHaloRight"
+                android:id="@+id/sliderHaloRadius"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
-                android:valueFrom="0"
+                android:valueFrom="5"
                 android:valueTo="100"
-                android:value="0" />
+                android:value="30" />
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/tool_halo_top"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="12sp" />
+                android:gravity="end"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="8dp">
 
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderHaloTop"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:valueFrom="0"
-                android:valueTo="100"
-                android:value="0" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnHaloClose"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/tool_halo_close" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/tool_halo_bottom"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="12sp" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderHaloBottom"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:valueFrom="0"
-                android:valueTo="100"
-                android:value="0" />
+            </LinearLayout>
 
         </LinearLayout>
 

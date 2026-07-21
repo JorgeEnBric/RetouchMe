@@ -8,11 +8,8 @@ data class FaceAdjustments(
 
     // --- Máscara / borde ---
     val edgeShrink: Float = 0f,
-    val edgeShrinkLeft: Float = 0f,
-    val edgeShrinkRight: Float = 0f,
-    val edgeShrinkTop: Float = 0f,
-    val edgeShrinkBottom: Float = 0f,
     val featherRadiusPx: Float = 9f,
+    val haloBrushRadius: Float = 30f,
 
     // --- Color ---
     val lightnessShift: Float = 0f,

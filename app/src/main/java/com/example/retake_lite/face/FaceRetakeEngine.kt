@@ -84,7 +84,7 @@ class FaceRetakeEngine(
      * (cada vez que el usuario mueve un slider) reutilizando el mismo
      * AutoRetakeResult — no vuelve a detectar ni a decodificar nada.
      */
-    fun render(auto: AutoRetakeResult, adjustments: FaceAdjustments): Bitmap {
+    fun render(auto: AutoRetakeResult, adjustments: FaceAdjustments, eraseMask: Bitmap? = null): Bitmap {
         val box = auto.targetFace.boundingBox
         val cx = box.centerX().toFloat()
         val cy = box.centerY().toFloat()
@@ -108,10 +108,7 @@ class FaceRetakeEngine(
         val mask = FaceMaskBuilder.createFaceMask(
             w, h, auto.targetFace,
             adjustments.edgeShrink,
-            adjustments.edgeShrinkLeft,
-            adjustments.edgeShrinkRight,
-            adjustments.edgeShrinkTop,
-            adjustments.edgeShrinkBottom
+            eraseMask
         )
 
         val clipped = LaplacianBlender.clipOverlayToMask(overlay, mask)

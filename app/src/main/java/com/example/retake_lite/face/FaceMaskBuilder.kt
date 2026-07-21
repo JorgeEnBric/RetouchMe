@@ -29,10 +29,7 @@ object FaceMaskBuilder {
         height: Int,
         face: Face?,
         edgeShrink: Float = 0f,
-        edgeShrinkLeft: Float = 0f,
-        edgeShrinkRight: Float = 0f,
-        edgeShrinkTop: Float = 0f,
-        edgeShrinkBottom: Float = 0f
+        eraseMask: Bitmap? = null
     ): Bitmap {
         if (face == null) return createFullMask(width, height)
         val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -41,23 +38,20 @@ object FaceMaskBuilder {
         val contour = face.getContour(FaceContour.FACE)
         if (contour != null && contour.points.size >= 3) {
             canvas.drawPath(
-                expandContourDirectional(
-                    contour.points,
-                    edgeShrink, edgeShrinkLeft, edgeShrinkRight, edgeShrinkTop, edgeShrinkBottom
-                ),
+                expandContour(contour.points, edgeShrink),
                 fillPaint
             )
         } else {
             val box = face.boundingBox
             val cx = box.centerX().toFloat()
             val cy = box.centerY().toFloat()
-            val shrinkH = (edgeShrink + edgeShrinkLeft + edgeShrinkRight).coerceIn(0f, 0.8f)
-            val shrinkV = (edgeShrink + edgeShrinkTop + edgeShrinkBottom).coerceIn(0f, 0.8f)
-            val rx = box.width() * (0.55f - shrinkH * 0.5f)
-            val ry = box.height() * (0.62f - shrinkV * 0.5f)
+            val shrink = edgeShrink.coerceIn(0f, 0.8f)
+            val rx = box.width() * (0.55f - shrink * 0.5f)
+            val ry = box.height() * (0.62f - shrink * 0.5f)
             canvas.drawOval(cx - rx, cy - ry, cx + rx, cy + ry, fillPaint)
         }
 
+        if (eraseMask != null) applyEraseMask(mask, eraseMask)
         return mask
     }
 
@@ -67,39 +61,39 @@ object FaceMaskBuilder {
         return mask
     }
 
-    private fun expandContourDirectional(
+    private fun expandContour(
         points: List<PointF>,
-        general: Float,
-        left: Float,
-        right: Float,
-        top: Float,
-        bottom: Float
+        general: Float
     ): Path {
         val cx = points.map { it.x }.average().toFloat()
         val cy = points.map { it.y }.average().toFloat()
-        val halfW = (points.maxOf { it.x } - points.minOf { it.x }) / 2f
-        val halfH = (points.maxOf { it.y } - points.minOf { it.y }) / 2f
 
         val path = Path()
         points.forEachIndexed { i, p ->
-            val shrinkX = general + when {
-                p.x < cx -> left
-                p.x > cx -> right
-                else -> (left + right) / 2f
-            }
-            val shrinkY = general + when {
-                p.y < cy -> top
-                p.y > cy -> bottom
-                else -> (top + bottom) / 2f
-            }
-            val factorX = (1.10f - shrinkX.coerceIn(0f, 0.8f)).coerceAtLeast(0.5f)
-            val factorY = (1.10f - shrinkY.coerceIn(0f, 0.8f)).coerceAtLeast(0.5f)
-            val x = cx + (p.x - cx) * factorX
-            val y = cy + (p.y - cy) * factorY
+            val factor = (1.10f - general.coerceIn(0f, 0.8f)).coerceAtLeast(0.5f)
+            val x = cx + (p.x - cx) * factor
+            val y = cy + (p.y - cy) * factor
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
         return path
+    }
+
+    private fun applyEraseMask(mask: Bitmap, eraseMask: Bitmap) {
+        val w = mask.width
+        val h = mask.height
+        val mPx = IntArray(w * h)
+        val ePx = IntArray(w * h)
+        mask.getPixels(mPx, 0, w, 0, 0, w, h)
+        eraseMask.getPixels(ePx, 0, w, 0, 0, w, h)
+
+        for (i in mPx.indices) {
+            val ma = Color.alpha(mPx[i])
+            val ea = Color.alpha(ePx[i])
+            val newAlpha = (ma - ea).coerceIn(0, 255)
+            mPx[i] = Color.argb(newAlpha, 255, 255, 255)
+        }
+        mask.setPixels(mPx, 0, w, 0, 0, w, h)
     }
 }
 
