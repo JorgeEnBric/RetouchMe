@@ -208,6 +208,7 @@ object LaplacianBlender {
         val dstBgr = Mat()
         val maskGray = Mat()
         val resultBgr = Mat()
+        val kernel = Mat()
 
         Utils.bitmapToMat(overlay, srcRgba)
         Utils.bitmapToMat(base, dstRgba)
@@ -216,6 +217,12 @@ object LaplacianBlender {
         Imgproc.cvtColor(srcRgba, srcBgr, Imgproc.COLOR_RGBA2BGR)
         Imgproc.cvtColor(dstRgba, dstBgr, Imgproc.COLOR_RGBA2BGR)
         Core.extractChannel(maskRgba, maskGray, 0)
+
+        // Dilatar máscara 5 px para cubrir posibles huecos en la superposición
+        kernel.create(5, 5, org.opencv.core.CvType.CV_8U)
+        kernel.setTo(org.opencv.core.Scalar(1.0))
+        Imgproc.dilate(maskGray, maskGray, kernel)
+        kernel.release()
 
         val center = Point(centerX.toDouble(), centerY.toDouble())
         Photo.seamlessClone(srcBgr, dstBgr, maskGray, center, resultBgr, Photo.NORMAL_CLONE)

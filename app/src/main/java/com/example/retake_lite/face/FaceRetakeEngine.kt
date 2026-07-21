@@ -23,6 +23,7 @@ data class AutoRetakeResult(
     val targetBitmap: Bitmap,
     val targetFace: Face,
     val sourceBitmap: Bitmap,
+    val sourceFace: Face,
     val baseMatrix: Matrix
 )
 
@@ -75,7 +76,7 @@ class FaceRetakeEngine(
             return null
         }
 
-        return AutoRetakeResult(targetBitmap, targetFace, sourceBitmap, baseMatrix)
+        return AutoRetakeResult(targetBitmap, targetFace, sourceBitmap, sourceFace, baseMatrix)
     }
 
     /**
@@ -89,8 +90,6 @@ class FaceRetakeEngine(
         val cy = box.centerY().toFloat()
         val faceSize = kotlin.math.max(box.width(), box.height()).toFloat()
 
-        // Matriz final = automática + ajustes manuales (escala, rotación,
-        // desplazamiento), todo pivotando sobre el centro de la cara destino.
         val matrix = Matrix(auto.baseMatrix)
         matrix.postScale(adjustments.scale, adjustments.scale, cx, cy)
         matrix.postRotate(adjustments.rotationDegrees, cx, cy)
@@ -103,7 +102,7 @@ class FaceRetakeEngine(
         val h = auto.targetBitmap.height
         val result = auto.targetBitmap.copy(Bitmap.Config.ARGB_8888, true)
 
-        val overlay = result.copy(Bitmap.Config.ARGB_8888, true)
+        val overlay = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         Canvas(overlay).drawBitmap(auto.sourceBitmap, matrix, drawPaint)
 
         val mask = FaceMaskBuilder.createFaceMask(
@@ -115,20 +114,15 @@ class FaceRetakeEngine(
             adjustments.edgeShrinkBottom
         )
 
-        val manuallyShifted = LabColorTransfer.applyManualShift(
-            overlay, mask,
-            adjustments.lightnessShift,
-            adjustments.redGreenShift,
-            adjustments.blueYellowShift
-        )
-        if (manuallyShifted !== overlay) overlay.recycle()
+        val clipped = LaplacianBlender.clipOverlayToMask(overlay, mask)
+        overlay.recycle()
 
         val smoothed = if (adjustments.smoothing > 0f) {
-            applySkinSmoothing(manuallyShifted, mask, adjustments.smoothing)
-        } else manuallyShifted
-        if (smoothed !== manuallyShifted) manuallyShifted.recycle()
+            applySkinSmoothing(clipped, mask, adjustments.smoothing)
+        } else clipped
+        if (smoothed !== clipped) clipped.recycle()
 
-        val finalBmp = LaplacianBlender.poissonBlend(result, smoothed, mask, box.centerX(), box.centerY())
+        val finalBmp = LaplacianBlender.blend(result, smoothed, mask, 9f)
         if (finalBmp !== smoothed) smoothed.recycle()
         mask.recycle()
 
