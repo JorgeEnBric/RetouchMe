@@ -146,7 +146,7 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.imagePreview.setOnTouchListener { _, event ->
             if (binding.switchHaloPaint.isChecked) {
                 handleHaloTouch(event)
-            } else if (binding.switchTonePaint.isChecked) {
+            } else if (binding.switchTonePaint.isChecked || binding.switchToneEraser.isChecked) {
                 handleToneTouch(event)
             } else {
                 scaleDetector?.onTouchEvent(event)
@@ -212,7 +212,10 @@ class RetakeEditActivity : AppCompatActivity() {
         val p = screenToBitmap(event.x, event.y)
         binding.toneCursor.cursorX = event.x
         binding.toneCursor.cursorY = event.y
-        binding.toneCursor.cursorRadius = adjustments.haloBrushRadius
+        val matrixValues = FloatArray(9)
+        binding.imagePreview.imageMatrix.getValues(matrixValues)
+        val screenRadius = adjustments.haloBrushRadius * matrixValues[Matrix.MSCALE_X]
+        binding.toneCursor.cursorRadius = screenRadius
         binding.toneCursor.isErasing = true
         binding.toneCursor.invalidate()
 
@@ -280,7 +283,7 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.layoutPosSliders.visibility = View.GONE
         binding.layoutHaloSliders.visibility = View.GONE
         binding.layoutColorSliders.visibility = View.GONE
-        binding.layoutTonePanel.visibility = View.GONE
+        binding.layoutToneSliders.visibility = View.GONE
         binding.toneCursor.visibility = View.GONE
         binding.toneCursor.isErasing = false
 
@@ -315,6 +318,11 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.toolToggleGroup.check(binding.toolHalo.id)
                 binding.toneCursor.visibility = View.VISIBLE
                 binding.toneCursor.cursorRadius = adjustments.haloBrushRadius
+                val mv = FloatArray(9)
+                binding.imagePreview.imageMatrix.getValues(mv)
+                if (mv[Matrix.MSCALE_X] > 0f) {
+                    binding.toneCursor.cursorRadius = adjustments.haloBrushRadius * mv[Matrix.MSCALE_X]
+                }
                 binding.toneCursor.isErasing = binding.switchHaloPaint.isChecked
                 binding.toneCursor.invalidate()
             }
@@ -327,7 +335,7 @@ class RetakeEditActivity : AppCompatActivity() {
             }
             Tool.TONE -> {
                 binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_tone)
-                binding.layoutTonePanel.visibility = View.VISIBLE
+                binding.layoutToneSliders.visibility = View.VISIBLE
                 binding.sliderToneRadius.value = adjustments.toneRadius
                 binding.sliderToneStrength.value = adjustments.toneStrength * 100f
                 binding.toneCursor.cursorRadius = adjustments.toneRadius
@@ -382,9 +390,6 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.textHaloStatus.setText(R.string.tool_halo_brush_hint)
             }
         }
-        binding.btnHaloClose.setOnClickListener {
-            binding.layoutHaloSliders.visibility = View.GONE
-        }
         binding.btnHaloUndo.setOnClickListener {
             if (haloUndoStack.isNotEmpty()) {
                 haloEraseMask?.recycle()
@@ -418,38 +423,30 @@ class RetakeEditActivity : AppCompatActivity() {
             if (!fromUser) return@addOnChangeListener
             adjustments = adjustments.copy(toneStrength = value / 100f)
         }
-        binding.btnToneEraser.setOnClickListener { toggleToneEraser() }
-        binding.btnToneClose.setOnClickListener { closeTonePanel() }
-        binding.layoutTonePanel.setOnClickListener { closeTonePanel() }
-        binding.switchTonePaint.setOnCheckedChangeListener { _, isChecked ->
+        binding.switchToneEraser.setOnCheckedChangeListener { _, isChecked ->
+            toneIsErasing = isChecked
             if (isChecked) {
+                binding.switchTonePaint.isChecked = false
                 showToneCursor()
             } else {
-                hideToneCursor()
+                if (!binding.switchTonePaint.isChecked) {
+                    hideToneCursor()
+                }
             }
+            updateToneStatus()
         }
-    }
-
-    private fun closeTonePanel() {
-        binding.layoutTonePanel.visibility = View.GONE
-        if (binding.switchTonePaint.isChecked) {
-            showToneCursor()
-        }
-    }
-
-    private fun toggleToneEraser() {
-        toneIsErasing = !toneIsErasing
-        if (toneIsErasing) {
-            binding.switchTonePaint.isChecked = true
-            showToneCursor()
-        } else {
-            if (binding.switchTonePaint.isChecked && toneCursorVisible()) {
+        binding.switchTonePaint.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                binding.switchToneEraser.isChecked = false
+                toneIsErasing = false
                 showToneCursor()
-            } else if (!binding.switchTonePaint.isChecked) {
-                hideToneCursor()
+            } else {
+                if (!binding.switchToneEraser.isChecked) {
+                    hideToneCursor()
+                }
             }
+            updateToneStatus()
         }
-        updateToneStatus()
     }
 
     private fun toneCursorVisible() = binding.toneCursor.visibility == View.VISIBLE
@@ -493,6 +490,7 @@ class RetakeEditActivity : AppCompatActivity() {
         toneLastY = -1f
         toneHasPaint = false
         toneIsErasing = false
+        binding.switchToneEraser.isChecked = false
     }
 
     private fun screenToBitmap(sx: Float, sy: Float): PointF {

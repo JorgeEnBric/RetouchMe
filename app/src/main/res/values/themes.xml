@@ -10,6 +10,12 @@
         <item name="colorOnSecondaryContainer">@color/blue_grey_900</item>
         <item name="colorTertiary">@color/indigo_300</item>
         <item name="colorOnTertiary">@color/white</item>
+        <item name="colorSurface">#FFF5F7FA</item>
+        <item name="colorOnSurface">@color/indigo_900</item>
+        <item name="colorSurfaceVariant">#FFE8EAF6</item>
+        <item name="colorOnSurfaceVariant">@color/indigo_700</item>
+        <item name="colorOutline">@color/indigo_300</item>
+        <item name="colorOutlineVariant">@color/indigo_100</item>
         <item name="android:statusBarColor">@color/indigo_700</item>
         <item name="android:navigationBarColor">@color/indigo_900</item>
     </style>
