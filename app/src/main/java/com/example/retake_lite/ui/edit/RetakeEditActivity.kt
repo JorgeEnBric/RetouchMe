@@ -144,9 +144,9 @@ class RetakeEditActivity : AppCompatActivity() {
         })
 
         binding.imagePreview.setOnTouchListener { _, event ->
-            if (binding.switchHaloPaint.isChecked) {
+            if (binding.btnHaloEraser.isSelected) {
                 handleHaloTouch(event)
-            } else if (binding.switchTonePaint.isChecked || binding.switchToneEraser.isChecked) {
+            } else if (binding.btnTonePaint.isSelected || binding.btnToneEraser.isSelected) {
                 handleToneTouch(event)
             } else {
                 scaleDetector?.onTouchEvent(event)
@@ -323,7 +323,7 @@ class RetakeEditActivity : AppCompatActivity() {
                 if (mv[Matrix.MSCALE_X] > 0f) {
                     binding.toneCursor.cursorRadius = adjustments.haloBrushRadius * mv[Matrix.MSCALE_X]
                 }
-                binding.toneCursor.isErasing = binding.switchHaloPaint.isChecked
+                binding.toneCursor.isErasing = binding.btnHaloEraser.isSelected
                 binding.toneCursor.invalidate()
             }
             Tool.COLOR -> {
@@ -341,7 +341,7 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.toneCursor.cursorRadius = adjustments.toneRadius
                 binding.toneCursor.isSampled = toneIsSampled
                 binding.toneCursor.sampledColor = toneSampledColor
-                binding.toneCursor.visibility = if (binding.switchTonePaint.isChecked) View.VISIBLE else View.GONE
+                binding.toneCursor.visibility = if (binding.btnTonePaint.isSelected) View.VISIBLE else View.GONE
                 updateToneStatus()
                 binding.toolToggleGroup.check(binding.toolTone.id)
             }
@@ -383,8 +383,10 @@ class RetakeEditActivity : AppCompatActivity() {
             if (!fromUser) return@addOnChangeListener
             adjustments = adjustments.copy(haloBrushRadius = value)
         }
-        binding.switchHaloPaint.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
+        binding.btnHaloEraser.setOnClickListener {
+            binding.btnHaloEraser.isSelected = !binding.btnHaloEraser.isSelected
+            updateButtonTint(binding.btnHaloEraser)
+            if (binding.btnHaloEraser.isSelected) {
                 binding.textHaloStatus.setText(R.string.tool_halo_paint_mode)
             } else {
                 binding.textHaloStatus.setText(R.string.tool_halo_brush_hint)
@@ -423,25 +425,31 @@ class RetakeEditActivity : AppCompatActivity() {
             if (!fromUser) return@addOnChangeListener
             adjustments = adjustments.copy(toneStrength = value / 100f)
         }
-        binding.switchToneEraser.setOnCheckedChangeListener { _, isChecked ->
-            toneIsErasing = isChecked
-            if (isChecked) {
-                binding.switchTonePaint.isChecked = false
+        binding.btnToneEraser.setOnClickListener {
+            binding.btnToneEraser.isSelected = !binding.btnToneEraser.isSelected
+            updateButtonTint(binding.btnToneEraser)
+            toneIsErasing = binding.btnToneEraser.isSelected
+            if (binding.btnToneEraser.isSelected) {
+                binding.btnTonePaint.isSelected = false
+                updateButtonTint(binding.btnTonePaint)
                 showToneCursor()
             } else {
-                if (!binding.switchTonePaint.isChecked) {
+                if (!binding.btnTonePaint.isSelected) {
                     hideToneCursor()
                 }
             }
             updateToneStatus()
         }
-        binding.switchTonePaint.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                binding.switchToneEraser.isChecked = false
+        binding.btnTonePaint.setOnClickListener {
+            binding.btnTonePaint.isSelected = !binding.btnTonePaint.isSelected
+            updateButtonTint(binding.btnTonePaint)
+            if (binding.btnTonePaint.isSelected) {
+                binding.btnToneEraser.isSelected = false
+                updateButtonTint(binding.btnToneEraser)
                 toneIsErasing = false
                 showToneCursor()
             } else {
-                if (!binding.switchToneEraser.isChecked) {
+                if (!binding.btnToneEraser.isSelected) {
                     hideToneCursor()
                 }
             }
@@ -490,7 +498,23 @@ class RetakeEditActivity : AppCompatActivity() {
         toneLastY = -1f
         toneHasPaint = false
         toneIsErasing = false
-        binding.switchToneEraser.isChecked = false
+        binding.btnToneEraser.isSelected = false
+        binding.btnTonePaint.isSelected = false
+    }
+
+    private fun updateButtonTint(button: com.google.android.material.button.MaterialButton) {
+        val primaryColor = com.google.android.material.color.MaterialColors.getColor(button, androidx.appcompat.R.attr.colorPrimary)
+        val transparent = android.graphics.Color.TRANSPARENT
+        if (button.isSelected) {
+            button.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+            button.setTextColor(android.graphics.Color.WHITE)
+            button.iconTint = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+        } else {
+            button.backgroundTintList = android.content.res.ColorStateList.valueOf(transparent)
+            val onSurface = com.google.android.material.color.MaterialColors.getColor(button, com.google.android.material.R.attr.colorOnSurface)
+            button.setTextColor(onSurface)
+            button.iconTint = android.content.res.ColorStateList.valueOf(onSurface)
+        }
     }
 
     private fun screenToBitmap(sx: Float, sy: Float): PointF {
@@ -736,7 +760,7 @@ class RetakeEditActivity : AppCompatActivity() {
             put(MediaStore.Images.Media.DISPLAY_NAME, "retake_${System.currentTimeMillis()}.jpg")
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/RetouchMe")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Retouch Me")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
         }

@@ -32,4 +32,14 @@
         android:layout_height="wrap_content"
         android:text="@string/nav_header_subtitle"
         android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingTop="4dp"
+        android:text="github.com/JorgeEnBric"
+        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+        android:textColor="#B0BEC5"
+        android:autoLink="web"
+        android:linksClickable="true" />
 </LinearLayout>

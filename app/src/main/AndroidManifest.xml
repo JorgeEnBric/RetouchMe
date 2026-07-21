@@ -40,7 +40,7 @@
         <activity
             android:name=".ui.edit.RetakeEditActivity"
             android:exported="false"
-            android:label="Editor Retake"
+            android:label="Retouch Me"
             android:parentActivityName=".MainActivity" />
 
         <activity

@@ -101,7 +101,12 @@ class FaceOverlayView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val bmp = bitmap ?: return
+        val bmp = bitmap
+
+        if (bmp == null) {
+            drawPlaceholder(canvas)
+            return
+        }
 
         drawRect.set(0f, 0f, bmp.width.toFloat(), bmp.height.toFloat())
         imageMatrix.mapRect(drawRect)
@@ -126,6 +131,15 @@ class FaceOverlayView @JvmOverloads constructor(
             canvas.drawCircle(cx, textY - 14f, 22f, labelBgPaint)
             canvas.drawText(label, cx, textY, labelPaint)
         }
+    }
+
+    private fun drawPlaceholder(canvas: Canvas) {
+        val drawable = ContextCompat.getDrawable(context, R.drawable.ic_photo_placeholder) ?: return
+        val size = (minOf(width, height) * 0.35f).toInt()
+        val left = (width - size) / 2
+        val top = (height - size) / 2
+        drawable.setBounds(left, top, left + size, top + size)
+        drawable.draw(canvas)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
