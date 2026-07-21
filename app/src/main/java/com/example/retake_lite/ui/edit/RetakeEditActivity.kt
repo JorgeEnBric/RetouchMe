@@ -1,34 +1,72 @@
 package com.example.retake_lite.ui.edit
 
-import android.content.Intent
+import android.content.ContentValues
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.PointF
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.MediaStore
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.retake_lite.R
 import com.example.retake_lite.databinding.ActivityRetakeEditBinding
 import com.example.retake_lite.face.FaceAdjustments
 import com.example.retake_lite.face.FaceMaskBuilder
+import com.example.retake_lite.face.PostProcessAdjustments
+import com.example.retake_lite.face.PostProcessEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.OutputStream
+import kotlin.math.sqrt
 
 class RetakeEditActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRetakeEditBinding
 
     private var adjustments = FaceAdjustments()
+    private var postAdjustments = PostProcessSession.lastAdjustments
     private var activeTool: Tool = Tool.ZOOM
     private var renderJob: Job? = null
+    private var isPostVisible = false
 
     private var zoomMatrix = Matrix()
     private var scaleDetector: ScaleGestureDetector? = null
 
-    private enum class Tool { ZOOM, ROTATE, POSITION, HALO, COLOR }
+    private var toneOverlay: Bitmap? = null
+    private var toneCanvas: Canvas? = null
+    private var toneIsSampled = false
+    private var toneSampledColor = Color.TRANSPARENT
+    private var toneIsPainting = false
+    private var toneLastX = -1f
+    private var toneLastY = -1f
+    private var toneDownX = -1f
+    private var toneDownY = -1f
+    private var toneHasPaint = false
+    private val toneLongPressHandler = Handler(Looper.getMainLooper())
+    private var toneIsErasing = false
+    private var toneLongPressBmpX = 0f
+    private var toneLongPressBmpY = 0f
+    private val toneLongPressRunnable = Runnable {
+        sampleToneColor(toneLongPressBmpX, toneLongPressBmpY)
+        binding.imagePreview.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        scheduleRender()
+    }
+
+    private enum class Tool { ZOOM, ROTATE, POSITION, HALO, COLOR, TONE }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +88,9 @@ class RetakeEditActivity : AppCompatActivity() {
         setupPosSliders()
         setupHaloSliders()
         setupColorSliders()
+        setupPostChips()
+        setupPostSliders()
+        setupToneControls()
         setupPinchZoom()
 
         binding.btnCancelEdit.setOnClickListener {
@@ -57,7 +98,11 @@ class RetakeEditActivity : AppCompatActivity() {
             finish()
         }
 
-        binding.btnApplyEdit.setOnClickListener { applyAndFinish() }
+        binding.btnTogglePost.setOnClickListener { togglePostPanel() }
+        binding.btnApplySave.setOnClickListener { applyAndSave() }
+        binding.btnPostCancel.setOnClickListener { hidePostPanel() }
+        binding.btnPostApplySave.setOnClickListener { applyAndSave() }
+        binding.layoutPostPanel.setOnClickListener { hidePostPanel() }
 
         selectTool(Tool.ZOOM)
         renderPreview()
@@ -72,6 +117,7 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.toolPosition.id -> Tool.POSITION
                 binding.toolHalo.id -> Tool.HALO
                 binding.toolColor.id -> Tool.COLOR
+                binding.toolTone.id -> Tool.TONE
                 else -> Tool.ZOOM
             }
             selectTool(tool)
@@ -89,8 +135,59 @@ class RetakeEditActivity : AppCompatActivity() {
         })
 
         binding.imagePreview.setOnTouchListener { _, event ->
-            scaleDetector?.onTouchEvent(event)
+            if (binding.switchTonePaint.isChecked) {
+                handleToneTouch(event)
+            } else {
+                scaleDetector?.onTouchEvent(event)
+            }
             true
+        }
+    }
+
+    private fun handleToneTouch(event: MotionEvent) {
+        val bmp = (binding.imagePreview.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap ?: return
+        if (toneOverlay == null || toneOverlay!!.width != bmp.width || toneOverlay!!.height != bmp.height) {
+            initToneOverlay(bmp.width, bmp.height)
+        }
+
+        val p = screenToBitmap(event.x, event.y)
+        binding.toneCursor.cursorX = event.x
+        binding.toneCursor.cursorY = event.y
+        binding.toneCursor.invalidate()
+
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                toneDownX = event.x; toneDownY = event.y
+                toneIsPainting = false
+                toneLastX = -1f
+                toneLongPressBmpX = p.x; toneLongPressBmpY = p.y
+                toneLongPressHandler.postDelayed(toneLongPressRunnable, 600)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val dx = event.x - toneDownX; val dy = event.y - toneDownY
+                val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                if (dist > 15f) {
+                    toneLongPressHandler.removeCallbacks(toneLongPressRunnable)
+                    if (!toneIsPainting && (toneIsSampled || toneIsErasing)) {
+                        toneIsPainting = true
+                        toneLastX = p.x; toneLastY = p.y
+                    }
+                    if (toneIsPainting && toneLastX >= 0) {
+                        val steps = (dist / 5f).toInt().coerceIn(1, 20)
+                        for (i in 1..steps) {
+                            val t = i.toFloat() / steps
+                            val ix = toneLastX + (p.x - toneLastX) * t
+                            val iy = toneLastY + (p.y - toneLastY) * t
+                            if (toneIsErasing) eraseTone(ix, iy) else paintTone(ix, iy)
+                        }
+                    }
+                }
+            }
+            MotionEvent.ACTION_UP -> {
+                toneLongPressHandler.removeCallbacks(toneLongPressRunnable)
+                toneIsPainting = false
+                toneLastX = -1f
+            }
         }
     }
 
@@ -110,6 +207,8 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.layoutPosSliders.visibility = View.GONE
         binding.layoutHaloSliders.visibility = View.GONE
         binding.layoutColorSliders.visibility = View.GONE
+        binding.layoutTonePanel.visibility = View.GONE
+        if (tool != Tool.TONE) binding.toneCursor.visibility = View.GONE
 
         when (tool) {
             Tool.ZOOM -> {
@@ -151,6 +250,18 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.sliderColor.value = -adjustments.redGreenShift.coerceIn(-100f, 100f)
                 binding.sliderSmooth.value = (adjustments.smoothing * 100f).coerceIn(0f, 100f)
                 binding.toolToggleGroup.check(binding.toolColor.id)
+            }
+            Tool.TONE -> {
+                binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_tone)
+                binding.layoutTonePanel.visibility = View.VISIBLE
+                binding.sliderToneRadius.value = adjustments.toneRadius
+                binding.sliderToneStrength.value = adjustments.toneStrength * 100f
+                binding.toneCursor.cursorRadius = adjustments.toneRadius
+                binding.toneCursor.isSampled = toneIsSampled
+                binding.toneCursor.sampledColor = toneSampledColor
+                binding.toneCursor.visibility = if (binding.switchTonePaint.isChecked) View.VISIBLE else View.GONE
+                updateToneStatus()
+                binding.toolToggleGroup.check(binding.toolTone.id)
             }
         }
     }
@@ -221,6 +332,239 @@ class RetakeEditActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupToneControls() {
+        binding.sliderToneRadius.addOnChangeListener { _, value, fromUser ->
+            if (!fromUser) return@addOnChangeListener
+            adjustments = adjustments.copy(toneRadius = value)
+            binding.toneCursor.cursorRadius = value
+        }
+        binding.sliderToneStrength.addOnChangeListener { _, value, fromUser ->
+            if (!fromUser) return@addOnChangeListener
+            adjustments = adjustments.copy(toneStrength = value / 100f)
+        }
+        binding.btnToneEraser.setOnClickListener { toggleToneEraser() }
+        binding.btnToneClose.setOnClickListener { closeTonePanel() }
+        binding.layoutTonePanel.setOnClickListener { closeTonePanel() }
+        binding.switchTonePaint.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                showToneCursor()
+            } else {
+                hideToneCursor()
+            }
+        }
+    }
+
+    private fun closeTonePanel() {
+        binding.layoutTonePanel.visibility = View.GONE
+        if (binding.switchTonePaint.isChecked) {
+            showToneCursor()
+        }
+    }
+
+    private fun toggleToneEraser() {
+        toneIsErasing = !toneIsErasing
+        if (toneIsErasing) {
+            binding.switchTonePaint.isChecked = true
+            showToneCursor()
+        } else {
+            if (binding.switchTonePaint.isChecked && toneCursorVisible()) {
+                showToneCursor()
+            } else if (!binding.switchTonePaint.isChecked) {
+                hideToneCursor()
+            }
+        }
+        updateToneStatus()
+    }
+
+    private fun toneCursorVisible() = binding.toneCursor.visibility == View.VISIBLE
+
+    private fun showToneCursor() {
+        val bmp = (binding.imagePreview.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+        if (bmp != null && (toneOverlay == null || toneOverlay!!.width != bmp.width || toneOverlay!!.height != bmp.height)) {
+            toneOverlay?.recycle()
+            toneOverlay = Bitmap.createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
+            toneCanvas = Canvas(toneOverlay!!)
+        }
+        binding.toneCursor.visibility = View.VISIBLE
+        binding.toneCursor.cursorRadius = adjustments.toneRadius
+        binding.toneCursor.isSampled = toneIsSampled
+        binding.toneCursor.sampledColor = toneSampledColor
+        binding.toneCursor.isErasing = toneIsErasing
+    }
+
+    private fun hideToneCursor() {
+        binding.toneCursor.visibility = View.GONE
+    }
+
+    private fun updateToneStatus() {
+        binding.textToneStatus.setText(
+            when {
+                toneIsErasing -> R.string.tool_tone_eraser_active
+                toneIsSampled -> R.string.tool_tone_paint
+                else -> R.string.tool_tone_sample
+            }
+        )
+        binding.imagePreview.isLongClickable = true
+    }
+
+    private fun initToneOverlay(w: Int, h: Int) {
+        toneOverlay?.recycle()
+        toneOverlay = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        toneCanvas = Canvas(toneOverlay!!)
+        toneIsSampled = false
+        toneSampledColor = Color.TRANSPARENT
+        toneLastX = -1f
+        toneLastY = -1f
+        toneHasPaint = false
+        toneIsErasing = false
+    }
+
+    private fun screenToBitmap(sx: Float, sy: Float): PointF {
+        val inv = Matrix()
+        binding.imagePreview.imageMatrix.invert(inv)
+        val pts = floatArrayOf(sx, sy)
+        inv.mapPoints(pts)
+        return PointF(pts[0], pts[1])
+    }
+
+    private fun sampleToneColor(bmpX: Float, bmpY: Float) {
+        val bmp = binding.imagePreview.drawable?.let { d ->
+            if (d is android.graphics.drawable.BitmapDrawable) d.bitmap else null
+        } ?: return
+        val w = bmp.width; val h = bmp.height
+        val ix = bmpX.toInt().coerceIn(0, w - 1)
+        val iy = bmpY.toInt().coerceIn(0, h - 1)
+        val r = (adjustments.toneRadius.coerceAtLeast(5f) / 2f).toInt().coerceIn(1, 50)
+
+        var sumR = 0L; var sumG = 0L; var sumB = 0L; var count = 0L
+        for (dy in -r..r) for (dx in -r..r) {
+            val px = (ix + dx).coerceIn(0, w - 1)
+            val py = (iy + dy).coerceIn(0, h - 1)
+            if (dx * dx + dy * dy <= r * r) {
+                val c = bmp.getPixel(px, py)
+                sumR += Color.red(c); sumG += Color.green(c); sumB += Color.blue(c); count++
+            }
+        }
+        if (count == 0L) return
+        toneSampledColor = Color.rgb(
+            (sumR / count).toInt().coerceIn(0, 255),
+            (sumG / count).toInt().coerceIn(0, 255),
+            (sumB / count).toInt().coerceIn(0, 255)
+        )
+        toneIsSampled = true
+        toneHasPaint = false
+        toneIsErasing = false
+        toneOverlay?.let { ov ->
+            ov.eraseColor(Color.TRANSPARENT)
+        }
+        binding.toneCursor.isSampled = true
+        binding.toneCursor.sampledColor = toneSampledColor
+        updateToneStatus()
+    }
+
+    private fun paintTone(bmpX: Float, bmpY: Float) {
+        if (!toneIsSampled || toneCanvas == null) return
+        val radius = (adjustments.toneRadius / 2f).coerceAtLeast(3f)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = toneSampledColor
+            style = Paint.Style.FILL
+            alpha = 200
+        }
+        toneCanvas!!.drawCircle(bmpX, bmpY, radius, paint)
+        toneHasPaint = true
+        toneLastX = bmpX
+        toneLastY = bmpY
+        scheduleRender()
+    }
+
+    private fun eraseTone(bmpX: Float, bmpY: Float) {
+        if (toneCanvas == null) return
+        val radius = (adjustments.toneRadius / 2f).coerceAtLeast(3f)
+        val erasePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.CLEAR)
+        }
+        toneCanvas!!.drawCircle(bmpX, bmpY, radius, erasePaint)
+        toneHasPaint = true
+        toneLastX = bmpX
+        toneLastY = bmpY
+        scheduleRender()
+    }
+
+    // --- Post-process: chips, sliders, toggle, save ---
+
+    private fun setupPostChips() {
+        binding.chipGroupMode.setOnCheckedChangeListener { _, checkedId ->
+            val isFace = checkedId == binding.chipFace.id
+            binding.layoutFaceSliders.visibility = if (isFace) View.VISIBLE else View.GONE
+            binding.layoutGlobalSliders.visibility = if (isFace) View.GONE else View.VISIBLE
+        }
+    }
+
+    private fun setupPostSliders() {
+        val onChange = com.google.android.material.slider.Slider.OnChangeListener { _, _, fromUser ->
+            if (fromUser) {
+                postAdjustments = readPostAdjustments()
+                PostProcessSession.lastAdjustments = postAdjustments
+                scheduleRender()
+            }
+        }
+        binding.sliderFaceBrightness.addOnChangeListener(onChange)
+        binding.sliderFaceContrast.addOnChangeListener(onChange)
+        binding.sliderFaceSaturation.addOnChangeListener(onChange)
+        binding.sliderFaceWarmth.addOnChangeListener(onChange)
+        binding.sliderBrightness.addOnChangeListener(onChange)
+        binding.sliderContrast.addOnChangeListener(onChange)
+        binding.sliderSaturation.addOnChangeListener(onChange)
+        binding.sliderGamma.addOnChangeListener(onChange)
+        binding.sliderWarmth.addOnChangeListener(onChange)
+        binding.sliderSharpness.addOnChangeListener(onChange)
+
+        loadPostAdjustments()
+    }
+
+    private fun loadPostAdjustments() {
+        val last = PostProcessSession.lastAdjustments
+        binding.sliderFaceBrightness.value = last.faceBrightness
+        binding.sliderFaceContrast.value = last.faceContrast
+        binding.sliderFaceSaturation.value = last.faceSaturation
+        binding.sliderFaceWarmth.value = last.faceWarmth
+        binding.sliderBrightness.value = last.brightness
+        binding.sliderContrast.value = last.contrast
+        binding.sliderSaturation.value = last.saturation
+        binding.sliderGamma.value = (last.gamma * 100f).coerceIn(20f, 300f)
+        binding.sliderWarmth.value = last.warmth
+        binding.sliderSharpness.value = last.sharpness
+    }
+
+    private fun readPostAdjustments(): PostProcessAdjustments = PostProcessAdjustments(
+        faceBrightness = binding.sliderFaceBrightness.value,
+        faceContrast = binding.sliderFaceContrast.value,
+        faceSaturation = binding.sliderFaceSaturation.value,
+        faceWarmth = binding.sliderFaceWarmth.value,
+        brightness = binding.sliderBrightness.value,
+        contrast = binding.sliderContrast.value,
+        saturation = binding.sliderSaturation.value,
+        gamma = binding.sliderGamma.value / 100f,
+        warmth = binding.sliderWarmth.value,
+        sharpness = binding.sliderSharpness.value
+    )
+
+    private fun togglePostPanel() {
+        if (isPostVisible) hidePostPanel() else showPostPanel()
+    }
+
+    private fun showPostPanel() {
+        isPostVisible = true
+        binding.layoutPostPanel.visibility = View.VISIBLE
+    }
+
+    private fun hidePostPanel() {
+        isPostVisible = false
+        binding.layoutPostPanel.visibility = View.GONE
+    }
+
+    // --- Render pipeline ---
+
     private fun scheduleRender() {
         renderJob?.cancel()
         renderJob = lifecycleScope.launch {
@@ -236,13 +580,26 @@ class RetakeEditActivity : AppCompatActivity() {
             val engine = RetakeEditSession.engine ?: return@launch
 
             binding.progressPreview.visibility = View.VISIBLE
-            val bitmap = withContext(Dispatchers.Default) {
+            val swapBitmap = withContext(Dispatchers.Default) {
                 engine.render(auto, adjustments)
             }
-            binding.imagePreview.setImageBitmap(bitmap)
+            val mask = withContext(Dispatchers.Default) {
+                FaceMaskBuilder.createFaceMask(
+                    swapBitmap.width, swapBitmap.height, auto.targetFace,
+                    adjustments.edgeShrink,
+                    adjustments.edgeShrinkLeft, adjustments.edgeShrinkRight,
+                    adjustments.edgeShrinkTop, adjustments.edgeShrinkBottom
+                )
+            }
+            val filtered = withContext(Dispatchers.Default) {
+                PostProcessEngine.apply(swapBitmap, mask, postAdjustments)
+            }
+            val result = applyToneOverlay(filtered)
+            if (result !== filtered) filtered.recycle()
+            binding.imagePreview.setImageBitmap(result)
             zoomMatrix.reset()
             zoomMatrix = fitCenterMatrix(
-                bitmap.width, bitmap.height,
+                result.width, result.height,
                 binding.imagePreview.width, binding.imagePreview.height
             )
             binding.imagePreview.imageMatrix = zoomMatrix
@@ -251,31 +608,81 @@ class RetakeEditActivity : AppCompatActivity() {
         }
     }
 
-    private fun applyAndFinish() {
-        val auto = RetakeEditSession.auto ?: return finish()
-        val engine = RetakeEditSession.engine ?: return finish()
+    private fun applyAndSave() {
+        val auto = RetakeEditSession.auto ?: return
+        val engine = RetakeEditSession.engine ?: return
+
+        postAdjustments = readPostAdjustments()
+        PostProcessSession.lastAdjustments = postAdjustments
 
         binding.progressPreview.visibility = View.VISIBLE
         lifecycleScope.launch {
-            val finalBitmap = withContext(Dispatchers.Default) {
+            val swapBitmap = withContext(Dispatchers.Default) {
                 engine.render(auto, adjustments)
             }
-            val faceMask = withContext(Dispatchers.Default) {
+            val mask = withContext(Dispatchers.Default) {
                 FaceMaskBuilder.createFaceMask(
-                    finalBitmap.width, finalBitmap.height, auto.targetFace,
+                    swapBitmap.width, swapBitmap.height, auto.targetFace,
                     adjustments.edgeShrink,
                     adjustments.edgeShrinkLeft, adjustments.edgeShrinkRight,
                     adjustments.edgeShrinkTop, adjustments.edgeShrinkBottom
                 )
             }
-            val onFinalApplied = RetakeEditSession.onApplied
-            RetakeEditSession.clear()
-            PostProcessSession.start(finalBitmap, faceMask) { edited ->
-                onFinalApplied?.invoke(edited)
+            val filtered = withContext(Dispatchers.Default) {
+                PostProcessEngine.apply(swapBitmap, mask, postAdjustments)
             }
-            val intent = Intent(this@RetakeEditActivity, PostProcessActivity::class.java)
-            startActivity(intent)
+            val finalBitmap = applyToneOverlay(filtered)
+            if (finalBitmap !== filtered) filtered.recycle()
+
+            withContext(Dispatchers.IO) {
+                saveToGallery(finalBitmap)
+            }
+
+            Toast.makeText(this@RetakeEditActivity, com.example.retake_lite.R.string.image_saved_toast, Toast.LENGTH_SHORT).show()
+
+            RetakeEditSession.onApplied?.invoke(finalBitmap)
+            RetakeEditSession.clear()
             finish()
+        }
+    }
+
+    private fun applyToneOverlay(bitmap: Bitmap): Bitmap {
+        val ov = toneOverlay
+        if (ov == null || !toneHasPaint) return bitmap
+        val strength = adjustments.toneStrength.coerceIn(0f, 1f)
+        val out = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(out)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            alpha = (strength * 255).toInt()
+        }
+        canvas.drawBitmap(ov, 0f, 0f, paint)
+        return out
+    }
+
+    private fun saveToGallery(bitmap: Bitmap) {
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "retake_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/RetouchMe")
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
+        }
+
+        val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        if (uri != null) {
+            try {
+                contentResolver.openOutputStream(uri)?.use { out: OutputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    values.clear()
+                    values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    contentResolver.update(uri, values, null, null)
+                }
+            } catch (_: Exception) {
+                contentResolver.delete(uri, null, null)
+            }
         }
     }
 
@@ -294,5 +701,8 @@ class RetakeEditActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         renderJob?.cancel()
+        toneLongPressHandler.removeCallbacks(toneLongPressRunnable)
+        toneOverlay?.recycle()
+        toneOverlay = null
     }
 }

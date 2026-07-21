@@ -18,5 +18,9 @@ data class FaceAdjustments(
     val lightnessShift: Float = 0f,
     val redGreenShift: Float = 2.0f,
     val blueYellowShift: Float = 0f,
-    val smoothing: Float = 0f
+    val smoothing: Float = 0f,
+    val toneSourceX: Float = -1f,
+    val toneSourceY: Float = -1f,
+    val toneRadius: Float = 30f,
+    val toneStrength: Float = 0.5f
 )
