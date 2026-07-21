@@ -49,6 +49,7 @@ class RetakeEditActivity : AppCompatActivity() {
         setupSlider()
         setupPosSliders()
         setupHaloSliders()
+        setupColorSliders()
         setupPinchZoom()
 
         binding.btnCancelEdit.setOnClickListener {
@@ -93,12 +94,12 @@ class RetakeEditActivity : AppCompatActivity() {
         }
     }
 
-    private fun fitCenterMatrix(bmpW: Int, bmpH: Int, viewW: Int, viewH: Int): Matrix {
+    private fun fitCenterMatrix(bmpW: Int, bmpH: Int, viewW: Int, viewH: Int, zoom: Float = 1.5f): Matrix {
         val m = Matrix()
-        val scale = kotlin.math.min(viewW.toFloat() / bmpW, viewH.toFloat() / bmpH)
-        val dx = (viewW - bmpW * scale) / 2f
-        val dy = (viewH - bmpH * scale) / 2f
-        m.setScale(scale, scale)
+        val baseScale = kotlin.math.min(viewW.toFloat() / bmpW, viewH.toFloat() / bmpH) * zoom
+        val dx = (viewW - bmpW * baseScale) / 2f
+        val dy = (viewH - bmpH * baseScale) / 2f
+        m.setScale(baseScale, baseScale)
         m.postTranslate(dx, dy)
         return m
     }
@@ -108,6 +109,7 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.sliderTool.visibility = View.GONE
         binding.layoutPosSliders.visibility = View.GONE
         binding.layoutHaloSliders.visibility = View.GONE
+        binding.layoutColorSliders.visibility = View.GONE
 
         when (tool) {
             Tool.ZOOM -> {
@@ -145,10 +147,9 @@ class RetakeEditActivity : AppCompatActivity() {
             }
             Tool.COLOR -> {
                 binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_color)
-                binding.sliderTool.visibility = View.VISIBLE
-                binding.sliderTool.valueFrom = -50f
-                binding.sliderTool.valueTo = 50f
-                binding.sliderTool.value = -adjustments.redGreenShift.coerceIn(-50f, 50f)
+                binding.layoutColorSliders.visibility = View.VISIBLE
+                binding.sliderColor.value = -adjustments.redGreenShift.coerceIn(-100f, 100f)
+                binding.sliderSmooth.value = (adjustments.smoothing * 100f).coerceIn(0f, 100f)
                 binding.toolToggleGroup.check(binding.toolColor.id)
             }
         }
@@ -160,7 +161,6 @@ class RetakeEditActivity : AppCompatActivity() {
             adjustments = when (activeTool) {
                 Tool.ZOOM -> adjustments.copy(scale = sliderToScale(value))
                 Tool.ROTATE -> adjustments.copy(rotationDegrees = value)
-                Tool.COLOR -> adjustments.copy(redGreenShift = -value)
                 else -> return@addOnChangeListener
             }
             scheduleRender()
@@ -204,6 +204,19 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.sliderHaloBottom.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
             adjustments = adjustments.copy(edgeShrinkBottom = value / 100f)
+            scheduleRender()
+        }
+    }
+
+    private fun setupColorSliders() {
+        binding.sliderColor.addOnChangeListener { _, value, fromUser ->
+            if (!fromUser) return@addOnChangeListener
+            adjustments = adjustments.copy(redGreenShift = -value)
+            scheduleRender()
+        }
+        binding.sliderSmooth.addOnChangeListener { _, value, fromUser ->
+            if (!fromUser) return@addOnChangeListener
+            adjustments = adjustments.copy(smoothing = value / 100f)
             scheduleRender()
         }
     }

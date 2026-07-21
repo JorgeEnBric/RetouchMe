@@ -3,11 +3,15 @@ package com.example.retake_lite.face
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import com.example.retake_lite.data.FaceImageEntity
 import com.google.mlkit.vision.face.Face
 import kotlin.math.PI
+import org.opencv.android.Utils
+import org.opencv.core.Mat
+import org.opencv.imgproc.Imgproc
 
 /**
  * Resultado intermedio de la fase AUTOMÁTICA: todo lo que se necesita para
@@ -119,8 +123,13 @@ class FaceRetakeEngine(
         )
         if (manuallyShifted !== overlay) overlay.recycle()
 
-        val finalBmp = LaplacianBlender.poissonBlend(result, manuallyShifted, mask, box.centerX(), box.centerY())
-        if (finalBmp !== manuallyShifted) manuallyShifted.recycle()
+        val smoothed = if (adjustments.smoothing > 0f) {
+            applySkinSmoothing(manuallyShifted, mask, adjustments.smoothing)
+        } else manuallyShifted
+        if (smoothed !== manuallyShifted) manuallyShifted.recycle()
+
+        val finalBmp = LaplacianBlender.poissonBlend(result, smoothed, mask, box.centerX(), box.centerY())
+        if (finalBmp !== smoothed) smoothed.recycle()
         mask.recycle()
 
         return finalBmp
@@ -153,6 +162,60 @@ class FaceRetakeEngine(
         model?.let { m -> images.firstOrNull { it.id == m.bestReferenceId }?.let { return it } }
         return images.first()
     }
+
+    /**
+     * Suavizado de piel (efecto porcelana/embellecido).
+     * Aplica un desenfoque gaussiano sobre la zona de la máscara y lo fusiona
+     * según la fuerza indicada por [strength] (0..1).
+     */
+    private fun applySkinSmoothing(bitmap: Bitmap, mask: Bitmap, strength: Float): Bitmap {
+        val w = bitmap.width
+        val h = bitmap.height
+        val radius = (strength * 20f + 1f).toInt()
+
+        val srcMat = Mat()
+        Utils.bitmapToMat(bitmap, srcMat)
+
+        val blurred = Mat()
+        Imgproc.GaussianBlur(srcMat, blurred, org.opencv.core.Size(radius.toDouble() * 2 + 1, radius.toDouble() * 2 + 1), 0.0)
+
+        val maskPx = IntArray(w * h)
+        mask.getPixels(maskPx, 0, w, 0, 0, w, h)
+
+        val srcPx = IntArray(w * h)
+        bitmap.getPixels(srcPx, 0, w, 0, 0, w, h)
+
+        val blurPx = IntArray(w * h)
+        val blurBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(blurred, blurBmp)
+        blurBmp.getPixels(blurPx, 0, w, 0, 0, w, h)
+        blurBmp.recycle()
+        srcMat.release()
+        blurred.release()
+
+        val out = IntArray(w * h)
+        for (i in out.indices) {
+            val m = Color.alpha(maskPx[i]) / 255f * strength
+            if (m <= 0f) {
+                out[i] = srcPx[i]
+            } else {
+                val sw = m.coerceIn(0f, 1f)
+                out[i] = Color.argb(
+                    Color.alpha(srcPx[i]),
+                    lerp(Color.red(srcPx[i]), Color.red(blurPx[i]), sw),
+                    lerp(Color.green(srcPx[i]), Color.green(blurPx[i]), sw),
+                    lerp(Color.blue(srcPx[i]), Color.blue(blurPx[i]), sw)
+                )
+            }
+        }
+
+        val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        result.setPixels(out, 0, w, 0, 0, w, h)
+        return result
+    }
+
+    private fun lerp(a: Int, b: Int, t: Float): Int =
+        (a + (b - a) * t).toInt().coerceIn(0, 255)
 
     fun close() {
         embedder.close()
