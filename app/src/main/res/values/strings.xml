@@ -105,4 +105,12 @@
     <string name="continue_label">Continuar</string>
     <string name="cancel">Cancelar</string>
     <string name="apply">Aplicar</string>
+    <string name="tool_magic_halo">Halo mágico</string>
+    <string name="tool_magic_halo_apply">Aplicar halo mágico</string>
+    <string name="tool_magic_halo_clear">Quitar halo</string>
+    <string name="tool_magic_halo_hint">Detecta el contorno del rostro y aplica un halo incluyendo orejas</string>
+    <string name="tool_magic_halo_radius">Radio del halo</string>
+    <string name="tool_magic_halo_intensity">Intensidad</string>
+    <string name="tool_magic_halo_applied">Halo mágico aplicado</string>
+    <string name="tool_magic_halo_cleared">Halo mágico eliminado</string>
 </resources>

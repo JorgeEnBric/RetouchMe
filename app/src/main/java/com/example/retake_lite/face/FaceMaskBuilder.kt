@@ -24,6 +24,8 @@ object FaceMaskBuilder {
         style = Paint.Style.FILL
     }
 
+    private const val DESIRED_CONTOUR_POINTS = 200
+
     fun createFaceMask(
         width: Int,
         height: Int,
@@ -37,8 +39,9 @@ object FaceMaskBuilder {
 
         val contour = face.getContour(FaceContour.FACE)
         if (contour != null && contour.points.size >= 3) {
+            val densePoints = interpolateContour(contour.points, DESIRED_CONTOUR_POINTS)
             canvas.drawPath(
-                expandContour(contour.points, edgeShrink),
+                expandContour(densePoints, edgeShrink),
                 fillPaint
             )
         } else {
@@ -59,6 +62,36 @@ object FaceMaskBuilder {
         val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         Canvas(mask).drawColor(Color.WHITE)
         return mask
+    }
+
+    internal fun interpolateContour(points: List<PointF>, targetCount: Int): List<PointF> {
+        if (points.size < 3 || points.size >= targetCount) return points
+        val n = points.size
+        val result = mutableListOf<PointF>()
+        for (i in 0 until targetCount) {
+            val t = i.toFloat() / targetCount
+            val seg = t * n
+            val idx = seg.toInt().coerceAtMost(n - 1)
+            val frac = seg - idx
+            val p0 = points[(idx - 1 + n) % n]
+            val p1 = points[idx]
+            val p2 = points[(idx + 1) % n]
+            val p3 = points[(idx + 2) % n]
+            val t2 = frac * frac
+            val t3 = t2 * frac
+            val x = 0.5f * (
+                (2f * p1.x) + (-p0.x + p2.x) * frac +
+                (2f * p0.x - 5f * p1.x + 4f * p2.x - p3.x) * t2 +
+                (-p0.x + 3f * p1.x - 3f * p2.x + p3.x) * t3
+            )
+            val y = 0.5f * (
+                (2f * p1.y) + (-p0.y + p2.y) * frac +
+                (2f * p0.y - 5f * p1.y + 4f * p2.y - p3.y) * t2 +
+                (-p0.y + 3f * p1.y - 3f * p2.y + p3.y) * t3
+            )
+            result.add(PointF(x, y))
+        }
+        return result
     }
 
     private fun expandContour(

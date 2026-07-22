@@ -46,7 +46,13 @@
         <activity
             android:name=".ui.edit.PostProcessActivity"
             android:exported="false"
-            android:label="@string/title_post_process"
+            android:title="@string/title_post_process"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".ui.contour.ContourTestActivity"
+            android:exported="false"
+            android:title="Test contorno"
             android:parentActivityName=".MainActivity" />
 
     </application>
