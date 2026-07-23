@@ -81,7 +81,7 @@ class FaceSwapActivity : AppCompatActivity() {
         binding.btnPickImage.setOnClickListener { pickImageLauncher.launch("image/*") }
         binding.btnAddSwap.setOnClickListener { addPendingSwap() }
         binding.btnSwap.setOnClickListener { performSwap() }
-        binding.btnEditResult.setOnClickListener { openEditScreen() }
+
 
         // NUEVO: switch de selección automática. Requiere un
         // <com.google.android.material.switchmaterial.SwitchMaterial
@@ -197,7 +197,6 @@ class FaceSwapActivity : AppCompatActivity() {
         selectedFaceIndex = -1
         selectedReferenceId = null
         binding.imageResult.visibility = View.GONE
-        binding.btnEditResult.visibility = View.GONE
         binding.cardSelection.visibility = View.GONE
         updatePendingVisibility()
         updateSwapButtonState()

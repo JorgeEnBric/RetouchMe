@@ -21,6 +21,5 @@ data class FaceAdjustments(
     val smoothing: Float = 0f,
     val toneSourceX: Float = -1f,
     val toneSourceY: Float = -1f,
-    val toneRadius: Float = 30f,
-    val toneStrength: Float = 0.5f
+    val toneRadius: Float = 30f
 )

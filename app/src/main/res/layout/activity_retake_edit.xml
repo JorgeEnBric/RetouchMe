@@ -127,32 +127,15 @@
                 android:textAppearance="?attr/textAppearanceLabelSmall"
                 android:textSize="12sp" />
 
-            <LinearLayout
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnMagicHaloToggle"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="16dp"
-                android:paddingTop="8dp">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMagicHaloToggle"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/tool_magic_halo_apply"
-                    android:textAllCaps="false" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMagicHaloClear"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/tool_magic_halo_clear"
-                    android:layout_marginStart="8dp" />
-
-            </LinearLayout>
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/tool_magic_halo_apply"
+                android:textAllCaps="false" />
 
             <TextView
                 android:id="@+id/textMagicHaloStatus"
@@ -169,24 +152,6 @@
                 android:layout_height="1dp"
                 android:layout_marginVertical="8dp"
                 android:background="?attr/colorOutline" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="4dp"
-                android:text="@string/tool_halo_general"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="12sp" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderHaloGeneral"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:valueFrom="0"
-                android:valueTo="100"
-                android:value="0" />
 
             <TextView
                 android:id="@+id/textHaloStatus"
@@ -219,8 +184,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/tool_halo_paint_mode"
-                    app:icon="@drawable/ic_eraser" />
+                    android:text="@string/tool_halo_paint_mode" />
 
             </LinearLayout>
 
@@ -241,49 +205,6 @@
                 android:valueFrom="10"
                 android:valueTo="100"
                 android:value="25" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/layoutColorSliders"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/tool_color"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="12sp" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderColor"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:valueFrom="-100"
-                android:valueTo="100"
-                android:value="0" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/tool_smooth"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="12sp" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderSmooth"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:valueFrom="0"
-                android:valueTo="100"
-                android:value="0" />
 
         </LinearLayout>
 
@@ -322,23 +243,6 @@
                 android:valueTo="100"
                 android:value="30" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/tool_tone_strength"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="11sp" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderToneStrength"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:valueFrom="0"
-                android:valueTo="100"
-                android:value="50" />
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -361,8 +265,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/tool_tone_eraser"
-                    app:icon="@drawable/ic_eraser" />
+                    android:text="@string/tool_tone_eraser" />
 
             </LinearLayout>
 
@@ -415,16 +318,6 @@
                 android:layout_height="56dp"
                 android:contentDescription="@string/tool_halo"
                 app:icon="@drawable/ic_tool_blur"
-                app:iconGravity="textStart"
-                app:iconPadding="0dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/toolColor"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:contentDescription="@string/tool_color"
-                app:icon="@drawable/ic_tool_color"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp" />
 
@@ -616,6 +509,23 @@
                             android:layout_marginHorizontal="16dp"
                             android:valueFrom="-50"
                             android:valueTo="50"
+                            android:value="0" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:text="@string/tool_smooth"
+                            android:textAppearance="?attr/textAppearanceLabelSmall"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.slider.Slider
+                            android:id="@+id/sliderFaceSmooth"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="16dp"
+                            android:valueFrom="0"
+                            android:valueTo="100"
                             android:value="0" />
 
                     </LinearLayout>
