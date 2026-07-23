@@ -32,7 +32,8 @@ object FaceMaskBuilder {
         face: Face?,
         edgeShrink: Float = 0f,
         eraseMask: Bitmap? = null,
-        contourPath: Path? = null
+        contourPath: Path? = null,
+        eraseIntensity: Float = 1f
     ): Bitmap {
         if (face == null && contourPath == null) return createFullMask(width, height)
         val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -56,7 +57,7 @@ object FaceMaskBuilder {
             }
         }
 
-        if (eraseMask != null) applyEraseMask(mask, eraseMask)
+        if (eraseMask != null) applyEraseMask(mask, eraseMask, eraseIntensity)
         return mask
     }
 
@@ -165,7 +166,7 @@ object FaceMaskBuilder {
         return path
     }
 
-    private fun applyEraseMask(mask: Bitmap, eraseMask: Bitmap) {
+    private fun applyEraseMask(mask: Bitmap, eraseMask: Bitmap, intensity: Float) {
         val w = mask.width
         val h = mask.height
         val mPx = IntArray(w * h)
@@ -173,9 +174,10 @@ object FaceMaskBuilder {
         mask.getPixels(mPx, 0, w, 0, 0, w, h)
         eraseMask.getPixels(ePx, 0, w, 0, 0, w, h)
 
+        val factor = intensity.coerceIn(0f, 1f)
         for (i in mPx.indices) {
             val ma = Color.alpha(mPx[i])
-            val ea = Color.alpha(ePx[i])
+            val ea = (Color.alpha(ePx[i]) * factor).toInt()
             val newAlpha = (ma - ea).coerceIn(0, 255)
             mPx[i] = Color.argb(newAlpha, 255, 255, 255)
         }

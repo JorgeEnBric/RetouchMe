@@ -87,6 +87,7 @@
     <string name="tool_halo_brush_hint">Mantén presionado para borrar el halo del borde</string>
     <string name="tool_halo_paint_mode">Borrador activo</string>
     <string name="tool_halo_radius">Radio del borrador</string>
+    <string name="tool_halo_intensity">Intensidad</string>
     <string name="tool_halo_close">Cerrar</string>
     <string name="tool_halo_undo">Devolver halo</string>
     <string name="tool_color">Tono de piel</string>

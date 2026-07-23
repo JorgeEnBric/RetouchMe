@@ -10,6 +10,7 @@ data class FaceAdjustments(
     val edgeShrink: Float = 0f,
     val featherRadiusPx: Float = 9f,
     val haloBrushRadius: Float = 30f,
+    val haloEraseIntensity: Float = 1.0f,
 
     // --- Halo mágico ---
     val magicHaloEnabled: Boolean = false,

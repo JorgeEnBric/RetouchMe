@@ -110,7 +110,8 @@ class FaceRetakeEngine(
             w, h, auto.targetFace,
             adjustments.edgeShrink,
             eraseMask,
-            contourPath
+            contourPath,
+            adjustments.haloEraseIntensity
         )
 
         val clipped = LaplacianBlender.clipOverlayToMask(overlay, mask)

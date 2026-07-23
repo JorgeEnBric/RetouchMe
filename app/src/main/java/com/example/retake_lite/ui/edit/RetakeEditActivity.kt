@@ -322,11 +322,16 @@ class RetakeEditActivity : AppCompatActivity() {
 
     private fun eraseHalo(bmpX: Float, bmpY: Float) {
         val canvas = haloEraseCanvas ?: return
+        val r = adjustments.haloBrushRadius
         val paint = Paint().apply {
-            color = Color.WHITE
-            style = Paint.Style.FILL
+            shader = android.graphics.RadialGradient(
+                bmpX, bmpY, r,
+                intArrayOf(Color.WHITE, Color.TRANSPARENT),
+                floatArrayOf(0.3f, 1f),
+                android.graphics.Shader.TileMode.CLAMP
+            )
         }
-        canvas.drawCircle(bmpX, bmpY, adjustments.haloBrushRadius, paint)
+        canvas.drawCircle(bmpX, bmpY, r, paint)
     }
 
     private fun fitCenterMatrix(bmpW: Int, bmpH: Int, viewW: Int, viewH: Int, zoom: Float = 1.5f): Matrix {
@@ -383,6 +388,7 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_halo)
                 binding.layoutHaloSliders.visibility = View.VISIBLE
                 binding.toolToggleGroup.check(binding.toolHalo.id)
+                binding.sliderHaloIntensity.value = adjustments.haloEraseIntensity * 100f
                 binding.btnMagicHaloToggle.isSelected = adjustments.magicHaloEnabled
                 updateButtonTint(binding.btnMagicHaloToggle)
                 updateMagicHaloStatus()
@@ -441,6 +447,10 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.sliderHaloRadius.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
             adjustments = adjustments.copy(haloBrushRadius = value)
+        }
+        binding.sliderHaloIntensity.addOnChangeListener { _, value, fromUser ->
+            if (!fromUser) return@addOnChangeListener
+            adjustments = adjustments.copy(haloEraseIntensity = value / 100f)
         }
         binding.btnHaloEraser.setOnClickListener {
             binding.btnHaloEraser.isSelected = !binding.btnHaloEraser.isSelected
@@ -856,7 +866,8 @@ class RetakeEditActivity : AppCompatActivity() {
                     swapBitmap.width, swapBitmap.height, auto.targetFace,
                     adjustments.edgeShrink,
                     haloEraseMask,
-                    maskContourPath
+                    maskContourPath,
+                    adjustments.haloEraseIntensity
                 )
             }
             val filtered = withContext(Dispatchers.Default) {
@@ -938,7 +949,8 @@ class RetakeEditActivity : AppCompatActivity() {
                     swapBitmap.width, swapBitmap.height, auto.targetFace,
                     adjustments.edgeShrink,
                     haloEraseMask,
-                    maskContourPath
+                    maskContourPath,
+                    adjustments.haloEraseIntensity
                 )
             }
             val filtered = withContext(Dispatchers.Default) {
