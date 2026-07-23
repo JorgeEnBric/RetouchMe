@@ -23,6 +23,7 @@ import com.example.retake_lite.R
 import com.example.retake_lite.databinding.ActivityRetakeEditBinding
 import com.example.retake_lite.face.FaceAdjustments
 import com.example.retake_lite.face.FaceMaskBuilder
+import com.example.retake_lite.face.MediaPipeFaceMeshHelper
 import com.example.retake_lite.face.PostProcessAdjustments
 import com.example.retake_lite.face.PostProcessEngine
 import kotlinx.coroutines.Dispatchers
@@ -75,7 +76,14 @@ class RetakeEditActivity : AppCompatActivity() {
     private var haloDownY = -1f
     private val haloUndoStack = mutableListOf<Bitmap>()
 
-    private enum class Tool { ZOOM, ROTATE, POSITION, HALO, COLOR, TONE, MAGIC_HALO }
+    private var mediaPipeHelper: MediaPipeFaceMeshHelper? = null
+    private var faceContour: List<PointF>? = null
+    private var faceLandmarkCount: Int = 0
+    private var faceContourPixels: Int = 0
+    private var sourceContourRaw: List<PointF>? = null
+    private var showContourLines: Boolean = false
+
+    private enum class Tool { ZOOM, ROTATE, POSITION, HALO, COLOR, TONE }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,6 +110,7 @@ class RetakeEditActivity : AppCompatActivity() {
         setupToneControls()
         setupMagicHaloSliders()
         setupPinchZoom()
+        mediaPipeHelper = MediaPipeFaceMeshHelper(this)
 
         binding.btnCancelEdit.setOnClickListener {
             RetakeEditSession.clear()
@@ -115,7 +124,58 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.layoutPostPanel.setOnClickListener { hidePostPanel() }
 
         selectTool(Tool.ZOOM)
+
+        // Auto-activar halo mágico al abrir el editor (solo primera vez)
+        if (!RetakeEditSession.magicHaloAutoApplied) {
+            RetakeEditSession.magicHaloAutoApplied = true
+            adjustments = adjustments.copy(magicHaloEnabled = true)
+            RetakeEditSession.lastAdjustments = adjustments
+            showContourLines = true
+            lifecycleScope.launch {
+                delay(2000)
+                if (adjustments.magicHaloEnabled) {
+                    showContourLines = false
+                    scheduleRender()
+                }
+            }
+        }
+
         renderPreview()
+        preloadFaceContour()
+    }
+
+    private fun getFaceMatrix(auto: com.example.retake_lite.face.AutoRetakeResult): android.graphics.Matrix {
+        val box = auto.targetFace.boundingBox
+        val cx = box.centerX().toFloat()
+        val cy = box.centerY().toFloat()
+        val faceSize = kotlin.math.max(box.width(), box.height()).toFloat()
+        val matrix = android.graphics.Matrix(auto.baseMatrix)
+        matrix.postScale(adjustments.scale, adjustments.scale, cx, cy)
+        matrix.postRotate(adjustments.rotationDegrees, cx, cy)
+        matrix.postTranslate(adjustments.offsetXRatio * faceSize, adjustments.offsetYRatio * faceSize)
+        return matrix
+    }
+
+    private fun transformPoints(points: List<PointF>, matrix: android.graphics.Matrix): List<PointF> {
+        val src = FloatArray(points.size * 2)
+        val dst = FloatArray(points.size * 2)
+        points.forEachIndexed { i, p ->
+            src[i * 2] = p.x; src[i * 2 + 1] = p.y
+        }
+        matrix.mapPoints(dst, src)
+        return points.indices.map { PointF(dst[it * 2], dst[it * 2 + 1]) }
+    }
+
+    private fun preloadFaceContour() {
+        val auto = RetakeEditSession.auto ?: return
+        lifecycleScope.launch(Dispatchers.Default) {
+            val allLandmarks = mediaPipeHelper?.detectFirstFace(auto.sourceBitmap)
+            if (allLandmarks != null && allLandmarks.size >= 468) {
+                faceLandmarkCount = allLandmarks.size
+                val hull = FaceMaskBuilder.convexHull(allLandmarks)
+                sourceContourRaw = FaceMaskBuilder.interpolateContour(hull, 200)
+            }
+        }
     }
 
     private fun setupToolbar() {
@@ -128,7 +188,6 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.toolHalo.id -> Tool.HALO
                 binding.toolColor.id -> Tool.COLOR
                 binding.toolTone.id -> Tool.TONE
-                binding.toolMagicHalo.id -> Tool.MAGIC_HALO
                 else -> Tool.ZOOM
             }
             selectTool(tool)
@@ -286,9 +345,13 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.layoutHaloSliders.visibility = View.GONE
         binding.layoutColorSliders.visibility = View.GONE
         binding.layoutToneSliders.visibility = View.GONE
-        binding.layoutMagicHaloSliders.visibility = View.GONE
         binding.toneCursor.visibility = View.GONE
         binding.toneCursor.isErasing = false
+        binding.btnTonePaint.isSelected = false
+        updateButtonTint(binding.btnTonePaint)
+        binding.btnToneEraser.isSelected = false
+        updateButtonTint(binding.btnToneEraser)
+        toneIsErasing = false
 
         when (tool) {
             Tool.ZOOM -> {
@@ -319,6 +382,9 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.layoutHaloSliders.visibility = View.VISIBLE
                 binding.sliderHaloGeneral.value = adjustments.edgeShrink * 100f
                 binding.toolToggleGroup.check(binding.toolHalo.id)
+                binding.btnMagicHaloToggle.isSelected = adjustments.magicHaloEnabled
+                updateButtonTint(binding.btnMagicHaloToggle)
+                updateMagicHaloStatus()
                 binding.toneCursor.visibility = View.VISIBLE
                 binding.toneCursor.cursorRadius = adjustments.haloBrushRadius
                 val mv = FloatArray(9)
@@ -347,14 +413,6 @@ class RetakeEditActivity : AppCompatActivity() {
                 binding.toneCursor.visibility = if (binding.btnTonePaint.isSelected) View.VISIBLE else View.GONE
                 updateToneStatus()
                 binding.toolToggleGroup.check(binding.toolTone.id)
-            }
-            Tool.MAGIC_HALO -> {
-                binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_magic_halo)
-                binding.layoutMagicHaloSliders.visibility = View.VISIBLE
-                binding.toolToggleGroup.check(binding.toolMagicHalo.id)
-                binding.btnMagicHaloToggle.isSelected = adjustments.magicHaloEnabled
-                updateButtonTint(binding.btnMagicHaloToggle)
-                updateMagicHaloStatus()
             }
         }
     }
@@ -469,28 +527,32 @@ class RetakeEditActivity : AppCompatActivity() {
     }
 
     private fun setupMagicHaloSliders() {
-        binding.sliderMagicHaloRadius.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser) return@addOnChangeListener
-            adjustments = adjustments.copy(magicHaloRadius = value)
-            if (adjustments.magicHaloEnabled) scheduleRender()
-        }
-        binding.sliderMagicHaloIntensity.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser) return@addOnChangeListener
-            adjustments = adjustments.copy(magicHaloIntensity = value / 100f)
-            if (adjustments.magicHaloEnabled) scheduleRender()
-        }
         binding.btnMagicHaloToggle.setOnClickListener {
             val enabled = !adjustments.magicHaloEnabled
             adjustments = adjustments.copy(magicHaloEnabled = enabled)
             binding.btnMagicHaloToggle.isSelected = enabled
             updateButtonTint(binding.btnMagicHaloToggle)
-            updateMagicHaloStatus()
-            scheduleRender()
+            if (enabled) {
+                showContourLines = true
+                scheduleRender()
+                lifecycleScope.launch {
+                    delay(2000)
+                    if (adjustments.magicHaloEnabled) {
+                        showContourLines = false
+                        scheduleRender()
+                    }
+                }
+            } else {
+                showContourLines = false
+                updateMagicHaloStatus()
+                scheduleRender()
+            }
         }
         binding.btnMagicHaloClear.setOnClickListener {
             adjustments = adjustments.copy(magicHaloEnabled = false)
             binding.btnMagicHaloToggle.isSelected = false
             updateButtonTint(binding.btnMagicHaloToggle)
+            showContourLines = false
             updateMagicHaloStatus()
             scheduleRender()
         }
@@ -498,7 +560,11 @@ class RetakeEditActivity : AppCompatActivity() {
 
     private fun updateMagicHaloStatus() {
         binding.textMagicHaloStatus.text = if (adjustments.magicHaloEnabled) {
-            getString(R.string.tool_magic_halo_applied)
+            if (faceLandmarkCount > 0) {
+                "Activado · ${faceLandmarkCount} landmarks · ${faceContour?.size ?: 0} pts contorno · ${faceContourPixels} px dentro"
+            } else {
+                getString(R.string.tool_magic_halo_applied)
+            }
         } else {
             getString(R.string.tool_magic_halo_hint)
         }
@@ -539,6 +605,24 @@ class RetakeEditActivity : AppCompatActivity() {
             canvas.drawCircle(edgePoints[i].x, edgePoints[i].y, 4f, dotPaint)
             i += step
         }
+        return out
+    }
+
+    private fun drawContourLine(bitmap: Bitmap, points: List<PointF>): Bitmap {
+        val out = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(out)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.RED
+            style = Paint.Style.STROKE
+            strokeWidth = 4f * minOf(bitmap.width, bitmap.height) / 800f
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        val path = android.graphics.Path()
+        path.moveTo(points[0].x, points[0].y)
+        for (i in 1 until points.size) path.lineTo(points[i].x, points[i].y)
+        path.close()
+        canvas.drawPath(path, paint)
         return out
     }
 
@@ -763,15 +847,33 @@ class RetakeEditActivity : AppCompatActivity() {
             val engine = RetakeEditSession.engine ?: return@launch
 
             binding.progressPreview.visibility = View.VISIBLE
+            faceContourPixels = 0
+
+            val faceMatrix = getFaceMatrix(auto)
+            val transformedContour = if (sourceContourRaw != null) {
+                transformPoints(sourceContourRaw!!, faceMatrix)
+            } else null
+            faceContour = transformedContour
+
+            val maskContourPath = if (adjustments.magicHaloEnabled && faceContour != null) {
+                val pts = faceContour!!
+                val path = android.graphics.Path()
+                path.moveTo(pts[0].x, pts[0].y)
+                for (i in 1 until pts.size) path.lineTo(pts[i].x, pts[i].y)
+                path.close()
+                path
+            } else null
+
             val swapBitmap = withContext(Dispatchers.Default) {
-                engine.render(auto, adjustments, haloEraseMask)
+                engine.render(auto, adjustments, haloEraseMask, maskContourPath)
             }
 
             val mask = withContext(Dispatchers.Default) {
                 FaceMaskBuilder.createFaceMask(
                     swapBitmap.width, swapBitmap.height, auto.targetFace,
                     adjustments.edgeShrink,
-                    haloEraseMask
+                    haloEraseMask,
+                    maskContourPath
                 )
             }
             val filtered = withContext(Dispatchers.Default) {
@@ -780,13 +882,32 @@ class RetakeEditActivity : AppCompatActivity() {
             val result = applyToneOverlay(filtered)
 
             if (adjustments.magicHaloEnabled) {
-                val contourResult = withContext(Dispatchers.Default) {
-                    drawContourDotsFromMask(result, mask)
+                val preview: Bitmap
+                if (faceContour == null) {
+                    val allLandmarks = withContext(Dispatchers.Default) {
+                        mediaPipeHelper?.detectFirstFace(auto.sourceBitmap)
+                    }
+                    if (allLandmarks != null && allLandmarks.size >= 10) {
+                        faceLandmarkCount = allLandmarks.size
+                        val hull = FaceMaskBuilder.convexHull(allLandmarks)
+                        sourceContourRaw = FaceMaskBuilder.interpolateContour(hull, 200)
+                        faceContour = transformPoints(sourceContourRaw!!, faceMatrix)
+                        faceContourPixels = FaceMaskBuilder.countPixelsInPath(result.width, result.height, faceContour!!)
+                        updateMagicHaloStatus()
+                        preview = if (showContourLines) drawContourLine(result, faceContour!!) else result
+                    } else {
+                        preview = result
+                    }
+                } else if (showContourLines) {
+                    faceContourPixels = FaceMaskBuilder.countPixelsInPath(result.width, result.height, faceContour!!)
+                    preview = drawContourLine(result, faceContour!!)
+                } else {
+                    preview = result
                 }
                 mask.recycle()
-                if (contourResult !== result) result.recycle()
+                if (preview !== result) result.recycle()
                 if (filtered !== result) filtered.recycle()
-                binding.imagePreview.setImageBitmap(contourResult)
+                binding.imagePreview.setImageBitmap(preview)
             } else {
                 mask.recycle()
                 if (filtered !== result) filtered.recycle()
@@ -812,14 +933,29 @@ class RetakeEditActivity : AppCompatActivity() {
 
         binding.progressPreview.visibility = View.VISIBLE
         lifecycleScope.launch {
+            val faceMatrix = getFaceMatrix(auto)
+            val transformedContour = if (sourceContourRaw != null) {
+                transformPoints(sourceContourRaw!!, faceMatrix)
+            } else null
+            faceContour = transformedContour
+
+            val maskContourPath = if (adjustments.magicHaloEnabled && faceContour != null) {
+                val pts = faceContour!!
+                val path = android.graphics.Path()
+                path.moveTo(pts[0].x, pts[0].y)
+                for (i in 1 until pts.size) path.lineTo(pts[i].x, pts[i].y)
+                path.close()
+                path
+            } else null
             val swapBitmap = withContext(Dispatchers.Default) {
-                engine.render(auto, adjustments, haloEraseMask)
+                engine.render(auto, adjustments, haloEraseMask, maskContourPath)
             }
             val mask = withContext(Dispatchers.Default) {
                 FaceMaskBuilder.createFaceMask(
                     swapBitmap.width, swapBitmap.height, auto.targetFace,
                     adjustments.edgeShrink,
-                    haloEraseMask
+                    haloEraseMask,
+                    maskContourPath
                 )
             }
             val filtered = withContext(Dispatchers.Default) {
@@ -899,5 +1035,7 @@ class RetakeEditActivity : AppCompatActivity() {
         toneLongPressHandler.removeCallbacks(toneLongPressRunnable)
         toneOverlay?.recycle()
         toneOverlay = null
+        mediaPipeHelper?.close()
+        mediaPipeHelper = null
     }
 }

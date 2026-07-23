@@ -355,13 +355,10 @@ class FaceSwapActivity : AppCompatActivity() {
 
             resultBitmap?.recycle()
             resultBitmap = result
-            binding.imageResult.setImageBitmap(result)
-            binding.imageResult.visibility = View.VISIBLE
-            binding.btnEditResult.visibility = View.VISIBLE
             binding.progressBar.visibility = View.GONE
             binding.btnSwap.isEnabled = true
 
-            Snackbar.make(binding.root, R.string.swap_complete, Snackbar.LENGTH_SHORT).show()
+            openEditScreen()
         }
     }
 

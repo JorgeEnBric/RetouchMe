@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import com.example.retake_lite.data.FaceImageEntity
 import com.google.mlkit.vision.face.Face
 import kotlin.math.PI
@@ -84,7 +85,7 @@ class FaceRetakeEngine(
      * (cada vez que el usuario mueve un slider) reutilizando el mismo
      * AutoRetakeResult — no vuelve a detectar ni a decodificar nada.
      */
-    fun render(auto: AutoRetakeResult, adjustments: FaceAdjustments, eraseMask: Bitmap? = null): Bitmap {
+    fun render(auto: AutoRetakeResult, adjustments: FaceAdjustments, eraseMask: Bitmap? = null, contourPath: android.graphics.Path? = null): Bitmap {
         val box = auto.targetFace.boundingBox
         val cx = box.centerX().toFloat()
         val cy = box.centerY().toFloat()
@@ -108,7 +109,8 @@ class FaceRetakeEngine(
         val mask = FaceMaskBuilder.createFaceMask(
             w, h, auto.targetFace,
             adjustments.edgeShrink,
-            eraseMask
+            eraseMask,
+            contourPath
         )
 
         val clipped = LaplacianBlender.clipOverlayToMask(overlay, mask)

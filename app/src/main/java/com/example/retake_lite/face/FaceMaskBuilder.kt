@@ -31,27 +31,29 @@ object FaceMaskBuilder {
         height: Int,
         face: Face?,
         edgeShrink: Float = 0f,
-        eraseMask: Bitmap? = null
+        eraseMask: Bitmap? = null,
+        contourPath: Path? = null
     ): Bitmap {
-        if (face == null) return createFullMask(width, height)
+        if (face == null && contourPath == null) return createFullMask(width, height)
         val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(mask)
 
-        val contour = face.getContour(FaceContour.FACE)
-        if (contour != null && contour.points.size >= 3) {
-            val densePoints = interpolateContour(contour.points, DESIRED_CONTOUR_POINTS)
-            canvas.drawPath(
-                expandContour(densePoints, edgeShrink),
-                fillPaint
-            )
-        } else {
-            val box = face.boundingBox
-            val cx = box.centerX().toFloat()
-            val cy = box.centerY().toFloat()
-            val shrink = edgeShrink.coerceIn(0f, 0.8f)
-            val rx = box.width() * (0.55f - shrink * 0.5f)
-            val ry = box.height() * (0.62f - shrink * 0.5f)
-            canvas.drawOval(cx - rx, cy - ry, cx + rx, cy + ry, fillPaint)
+        if (contourPath != null) {
+            canvas.drawPath(contourPath, fillPaint)
+        } else if (face != null) {
+            val contour = face.getContour(FaceContour.FACE)
+            if (contour != null && contour.points.size >= 3) {
+                val densePoints = interpolateContour(contour.points, DESIRED_CONTOUR_POINTS)
+                canvas.drawPath(expandContour(densePoints, edgeShrink), fillPaint)
+            } else {
+                val box = face.boundingBox
+                val cx = box.centerX().toFloat()
+                val cy = box.centerY().toFloat()
+                val shrink = edgeShrink.coerceIn(0f, 0.8f)
+                val rx = box.width() * (0.55f - shrink * 0.5f)
+                val ry = box.height() * (0.62f - shrink * 0.5f)
+                canvas.drawOval(cx - rx, cy - ry, cx + rx, cy + ry, fillPaint)
+            }
         }
 
         if (eraseMask != null) applyEraseMask(mask, eraseMask)
@@ -62,6 +64,36 @@ object FaceMaskBuilder {
         val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         Canvas(mask).drawColor(Color.WHITE)
         return mask
+    }
+
+    fun countPixelsInPath(width: Int, height: Int, points: List<PointF>): Int {
+        val mask = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(mask)
+        val path = Path()
+        if (points.isNotEmpty()) {
+            path.moveTo(points[0].x, points[0].y)
+            for (i in 1 until points.size) path.lineTo(points[i].x, points[i].y)
+            path.close()
+        }
+        canvas.drawPath(path, fillPaint)
+        val px = IntArray(width * height)
+        mask.getPixels(px, 0, width, 0, 0, width, height)
+        mask.recycle()
+        return px.count { Color.alpha(it) > 127 }
+    }
+
+    fun contourPathFromPoints(points: List<PointF>, edgeShrink: Float = 0f): Path {
+        val cx = points.map { it.x }.average().toFloat()
+        val cy = points.map { it.y }.average().toFloat()
+        val path = Path()
+        points.forEachIndexed { i, p ->
+            val factor = (1.10f - edgeShrink.coerceIn(0f, 0.8f)).coerceAtLeast(0.5f)
+            val x = cx + (p.x - cx) * factor
+            val y = cy + (p.y - cy) * factor
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        return path
     }
 
     internal fun interpolateContour(points: List<PointF>, targetCount: Int): List<PointF> {
@@ -93,6 +125,27 @@ object FaceMaskBuilder {
         }
         return result
     }
+
+    fun convexHull(points: List<PointF>): List<PointF> {
+        if (points.size < 3) return points
+        val sorted = points.sortedWith(compareBy({ it.x }, { it.y }))
+        val lower = mutableListOf<PointF>()
+        for (p in sorted) {
+            while (lower.size >= 2 && cross(lower[lower.size - 2], lower[lower.size - 1], p) <= 0) lower.removeLast()
+            lower.add(p)
+        }
+        val upper = mutableListOf<PointF>()
+        for (p in sorted.reversed()) {
+            while (upper.size >= 2 && cross(upper[upper.size - 2], upper[upper.size - 1], p) <= 0) upper.removeLast()
+            upper.add(p)
+        }
+        lower.removeLast()
+        upper.removeLast()
+        return lower + upper
+    }
+
+    private fun cross(o: PointF, a: PointF, b: PointF): Float =
+        (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
 
     private fun expandContour(
         points: List<PointF>,

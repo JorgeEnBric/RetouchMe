@@ -22,6 +22,7 @@ object RetakeEditSession {
     var auto: AutoRetakeResult? = null
         private set
     var lastAdjustments: FaceAdjustments = FaceAdjustments()
+    var magicHaloAutoApplied: Boolean = false
 
     /** Callback que RetakeEditActivity invoca con el bitmap final al pulsar "Aplicar". */
     var onApplied: ((android.graphics.Bitmap) -> Unit)? = null
@@ -35,6 +36,7 @@ object RetakeEditSession {
         this.engine = engine
         this.auto = auto
         this.lastAdjustments = initialAdjustments
+        this.magicHaloAutoApplied = false
         this.onApplied = onApplied
     }
 

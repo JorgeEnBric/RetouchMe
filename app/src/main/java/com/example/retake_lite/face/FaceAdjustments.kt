@@ -13,8 +13,6 @@ data class FaceAdjustments(
 
     // --- Halo mágico ---
     val magicHaloEnabled: Boolean = false,
-    val magicHaloRadius: Float = 15f,
-    val magicHaloIntensity: Float = 0.6f,
 
     // --- Color ---
     val lightnessShift: Float = 0f,
