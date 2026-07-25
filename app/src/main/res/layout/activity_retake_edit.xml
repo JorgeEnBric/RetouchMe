@@ -65,14 +65,48 @@
             android:gravity="center"
             android:textAppearance="?attr/textAppearanceLabelLarge" />
 
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderTool"
+        <LinearLayout
+            android:id="@+id/layoutZoomSliders"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:valueFrom="-100"
-            android:valueTo="100"
-            android:value="0" />
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/tool_zoom"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderTool"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:valueFrom="-100"
+                android:valueTo="100"
+                android:value="0" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/tool_rotate"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderRotation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:valueFrom="-25"
+                android:valueTo="25"
+                android:value="0" />
+
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/layoutPosSliders"
@@ -403,22 +437,22 @@
                 app:iconPadding="0dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/toolRotate"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:contentDescription="@string/tool_rotate"
-                app:icon="@drawable/ic_tool_rotate"
-                app:iconGravity="textStart"
-                app:iconPadding="0dp" />
-
-            <com.google.android.material.button.MaterialButton
                 android:id="@+id/toolPosition"
                 style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 android:contentDescription="@string/tool_position"
                 app:icon="@drawable/ic_tool_move_h"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/toolFrameExpand"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:contentDescription="@string/tool_frame_expand"
+                app:icon="@drawable/ic_tool_frame_expand"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp" />
 
@@ -439,16 +473,6 @@
                 android:layout_height="56dp"
                 android:contentDescription="@string/tool_tone"
                 app:icon="@drawable/ic_tool_tone"
-                app:iconGravity="textStart"
-                app:iconPadding="0dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/toolFrameExpand"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:contentDescription="@string/tool_frame_expand"
-                app:icon="@drawable/ic_tool_frame_expand"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp" />
 
@@ -515,8 +539,8 @@
                 android:id="@+id/chipGroupMode"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="8dp"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="6dp"
                 app:singleSelection="true"
                 app:selectionRequired="true"
                 app:checkedIconVisible="false">
@@ -525,9 +549,10 @@
                     android:id="@+id/chipFace"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
                     android:checked="true"
                     android:text="@string/post_face"
+                    android:textSize="11sp"
                     app:chipBackgroundColor="?attr/colorPrimaryContainer"
                     android:textColor="?attr/colorOnPrimaryContainer"
                     app:chipStrokeWidth="1dp"
@@ -537,8 +562,9 @@
                     android:id="@+id/chipGlobal"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
                     android:text="@string/post_global"
+                    android:textSize="11sp"
                     app:chipBackgroundColor="?attr/colorSurfaceVariant"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     app:chipStrokeWidth="1dp"
@@ -549,7 +575,7 @@
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="4dp"
                 android:overScrollMode="never">
 
                 <LinearLayout
@@ -567,10 +593,10 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
-                            android:layout_marginTop="8dp"
+                            android:layout_marginTop="2dp"
                             android:text="@string/post_brightness"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderFaceBrightness"
@@ -587,7 +613,7 @@
                             android:layout_marginStart="16dp"
                             android:text="@string/post_contrast"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderFaceContrast"
@@ -604,7 +630,7 @@
                             android:layout_marginStart="16dp"
                             android:text="@string/post_saturation"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderFaceSaturation"
@@ -621,7 +647,7 @@
                             android:layout_marginStart="16dp"
                             android:text="@string/post_warmth"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderFaceWarmth"
@@ -638,7 +664,7 @@
                             android:layout_marginStart="16dp"
                             android:text="@string/tool_smooth"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderFaceSmooth"
@@ -662,10 +688,10 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
-                            android:layout_marginTop="8dp"
+                            android:layout_marginTop="2dp"
                             android:text="@string/post_brightness"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderBrightness"
@@ -682,7 +708,7 @@
                             android:layout_marginStart="16dp"
                             android:text="@string/post_contrast"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderContrast"
@@ -699,7 +725,7 @@
                             android:layout_marginStart="16dp"
                             android:text="@string/post_saturation"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderSaturation"
@@ -716,7 +742,7 @@
                             android:layout_marginStart="16dp"
                             android:text="@string/post_gamma"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderGamma"
@@ -733,7 +759,7 @@
                             android:layout_marginStart="16dp"
                             android:text="@string/post_warmth"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderWarmth"
@@ -750,7 +776,7 @@
                             android:layout_marginStart="16dp"
                             android:text="@string/post_sharpness"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.slider.Slider
                             android:id="@+id/sliderSharpness"
@@ -771,7 +797,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:padding="16dp">
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPostCancel"

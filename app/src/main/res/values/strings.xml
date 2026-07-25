@@ -65,7 +65,7 @@
     <!-- Entradas de ajustes de Retake -->
     <string name="title_retake_edit">Retocar</string>
     <string name="preview_image">Vista previa del resultado</string>
-    <string name="tool_zoom">Zoom</string>
+    <string name="tool_zoom">Básico</string>
     <string name="tool_rotate">Rotación</string>
     <string name="tool_position">Posición</string>
     <string name="tool_position_h">Horizontal</string>

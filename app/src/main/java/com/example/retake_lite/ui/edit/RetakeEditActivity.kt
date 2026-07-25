@@ -87,7 +87,7 @@ class RetakeEditActivity : AppCompatActivity() {
     private var showContourLines: Boolean = false
     private var showFrameExpandOverlay: Boolean = false
 
-    private enum class Tool { ZOOM, ROTATE, POSITION, HALO, TONE, FRAME_EXPAND }
+    private enum class Tool { ZOOM, POSITION, HALO, TONE, FRAME_EXPAND }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -188,7 +188,6 @@ class RetakeEditActivity : AppCompatActivity() {
             if (!isChecked) return@addOnButtonCheckedListener
             val tool = when (checkedId) {
                 binding.toolZoom.id -> Tool.ZOOM
-                binding.toolRotate.id -> Tool.ROTATE
                 binding.toolPosition.id -> Tool.POSITION
                 binding.toolHalo.id -> Tool.HALO
                 binding.toolTone.id -> Tool.TONE
@@ -391,7 +390,7 @@ class RetakeEditActivity : AppCompatActivity() {
 
     private fun selectTool(tool: Tool) {
         activeTool = tool
-        binding.sliderTool.visibility = View.GONE
+        binding.layoutZoomSliders.visibility = View.GONE
         binding.layoutPosSliders.visibility = View.GONE
         binding.layoutHaloSliders.visibility = View.GONE
         binding.layoutToneSliders.visibility = View.GONE
@@ -410,19 +409,10 @@ class RetakeEditActivity : AppCompatActivity() {
         when (tool) {
             Tool.ZOOM -> {
                 binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_zoom)
-                binding.sliderTool.visibility = View.VISIBLE
-                binding.sliderTool.valueFrom = -100f
-                binding.sliderTool.valueTo = 100f
+                binding.layoutZoomSliders.visibility = View.VISIBLE
                 binding.sliderTool.value = scaleToSlider(adjustments.scale)
+                binding.sliderRotation.value = adjustments.rotationDegrees.coerceIn(-25f, 25f)
                 binding.toolToggleGroup.check(binding.toolZoom.id)
-            }
-            Tool.ROTATE -> {
-                binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_rotate)
-                binding.sliderTool.visibility = View.VISIBLE
-                binding.sliderTool.valueFrom = -25f
-                binding.sliderTool.valueTo = 25f
-                binding.sliderTool.value = adjustments.rotationDegrees.coerceIn(-25f, 25f)
-                binding.toolToggleGroup.check(binding.toolRotate.id)
             }
             Tool.POSITION -> {
                 binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_position)
@@ -475,12 +465,11 @@ class RetakeEditActivity : AppCompatActivity() {
 
     private fun setupSlider() {
         binding.sliderTool.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser) return@addOnChangeListener
-            adjustments = when (activeTool) {
-                Tool.ZOOM -> adjustments.copy(scale = sliderToScale(value))
-                Tool.ROTATE -> adjustments.copy(rotationDegrees = value)
-                else -> return@addOnChangeListener
-            }
+            adjustments = adjustments.copy(scale = sliderToScale(value))
+            scheduleRender()
+        }
+        binding.sliderRotation.addOnChangeListener { _, value, fromUser ->
+            adjustments = adjustments.copy(rotationDegrees = value)
             scheduleRender()
         }
     }
