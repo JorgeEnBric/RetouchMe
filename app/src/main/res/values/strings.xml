@@ -87,6 +87,7 @@
     <string name="tool_halo_brush_hint">Mantén presionado para borrar el halo del borde</string>
     <string name="tool_halo_paint_mode">Borrador activo</string>
     <string name="tool_halo_radius">Radio del borrador</string>
+    <string name="tool_halo_intensity">Intensidad</string>
     <string name="tool_halo_close">Cerrar</string>
     <string name="tool_halo_undo">Devolver halo</string>
     <string name="tool_color">Tono de piel</string>
@@ -105,4 +106,13 @@
     <string name="continue_label">Continuar</string>
     <string name="cancel">Cancelar</string>
     <string name="apply">Aplicar</string>
+    <string name="tool_magic_halo">Halo mágico</string>
+    <string name="tool_magic_halo_apply">Aplicar halo mágico</string>
+    <string name="tool_magic_halo_clear">Quitar halo</string>
+    <string name="tool_magic_halo_hint">Detecta el contorno del rostro y recorta la máscara al borde facial</string>
+    <string name="tool_magic_halo_applied">Halo mágico aplicado</string>
+    <string name="tool_magic_halo_cleared">Halo mágico eliminado</string>
+    <string name="tool_frame_expand">Expandir encuadre</string>
+    <string name="tool_frame_expand_h">Ancho del encuadre</string>
+    <string name="tool_frame_expand_v">Alto del encuadre</string>
 </resources>
