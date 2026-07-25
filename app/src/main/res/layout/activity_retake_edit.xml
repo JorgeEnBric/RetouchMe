@@ -48,6 +48,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone" />
+
+            <com.example.retake_lite.ui.edit.ZoomIndicatorView
+                android:id="@+id/zoomIndicator"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
         </FrameLayout>
 
         <TextView
@@ -117,41 +123,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:visibility="gone">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="4dp"
-                android:text="@string/tool_magic_halo"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="12sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnMagicHaloToggle"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/tool_magic_halo_apply"
-                android:textAllCaps="false" />
-
-            <TextView
-                android:id="@+id/textMagicHaloStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="4dp"
-                android:text="@string/tool_magic_halo_hint"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="11sp" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginVertical="8dp"
-                android:background="?attr/colorOutline" />
 
             <TextView
                 android:id="@+id/textHaloStatus"
@@ -237,6 +208,7 @@
                         android:layout_height="wrap_content"
                         android:valueFrom="10"
                         android:valueTo="100"
+                        android:stepSize="18"
                         android:value="100" />
 
                 </LinearLayout>
@@ -262,23 +234,61 @@
                 android:textAppearance="?attr/textAppearanceLabelSmall"
                 android:textSize="11sp" />
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="4dp"
-                android:text="@string/tool_tone_radius"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textSize="11sp" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderToneRadius"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:orientation="horizontal"
                 android:layout_marginHorizontal="16dp"
-                android:valueFrom="10"
-                android:valueTo="100"
-                android:value="30" />
+                android:layout_marginTop="4dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tool_tone_radius"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textSize="11sp" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderToneRadius"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="10"
+                        android:valueTo="100"
+                        android:value="30" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tool_tone_strength"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textSize="11sp" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderToneIntensity"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="10"
+                        android:valueTo="100"
+                        android:stepSize="18"
+                        android:value="82" />
+
+                </LinearLayout>
+
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -303,6 +313,70 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/tool_tone_eraser" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layoutFrameExpandSliders"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="4dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tool_frame_expand_h"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textSize="11sp" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderFrameExpandX"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="50"
+                        android:valueTo="200"
+                        android:value="100" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tool_frame_expand_v"
+                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                        android:textSize="11sp" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderFrameExpandY"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="50"
+                        android:valueTo="200"
+                        android:value="100" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -365,6 +439,16 @@
                 android:layout_height="56dp"
                 android:contentDescription="@string/tool_tone"
                 app:icon="@drawable/ic_tool_tone"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/toolFrameExpand"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:contentDescription="@string/tool_frame_expand"
+                app:icon="@drawable/ic_tool_frame_expand"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp" />
 

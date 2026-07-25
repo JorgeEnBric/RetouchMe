@@ -15,6 +15,10 @@ data class FaceAdjustments(
     // --- Halo mágico ---
     val magicHaloEnabled: Boolean = false,
 
+    // --- Expandir encuadre ---
+    val frameExpandX: Float = 1.0f,
+    val frameExpandY: Float = 1.0f,
+
     // --- Color ---
     val lightnessShift: Float = 0f,
     val redGreenShift: Float = 2.0f,
@@ -22,5 +26,6 @@ data class FaceAdjustments(
     val smoothing: Float = 0f,
     val toneSourceX: Float = -1f,
     val toneSourceY: Float = -1f,
-    val toneRadius: Float = 30f
+    val toneRadius: Float = 30f,
+    val toneIntensity: Float = 0.82f
 )

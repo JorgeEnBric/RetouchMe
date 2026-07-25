@@ -112,4 +112,7 @@
     <string name="tool_magic_halo_hint">Detecta el contorno del rostro y recorta la máscara al borde facial</string>
     <string name="tool_magic_halo_applied">Halo mágico aplicado</string>
     <string name="tool_magic_halo_cleared">Halo mágico eliminado</string>
+    <string name="tool_frame_expand">Expandir encuadre</string>
+    <string name="tool_frame_expand_h">Ancho del encuadre</string>
+    <string name="tool_frame_expand_v">Alto del encuadre</string>
 </resources>

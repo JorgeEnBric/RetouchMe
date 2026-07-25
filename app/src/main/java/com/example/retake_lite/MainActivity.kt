@@ -9,7 +9,6 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.example.retake_lite.databinding.ActivityMainBinding
-import com.example.retake_lite.ui.contour.ContourTestActivity
 import com.example.retake_lite.ui.profile.ProfileManagerActivity
 import com.example.retake_lite.ui.swap.FaceSwapActivity
 import com.google.android.material.navigation.NavigationView
@@ -52,11 +51,6 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_face_swap -> {
                     startActivity(Intent(this, FaceSwapActivity::class.java))
-                    drawerLayout.closeDrawers()
-                    true
-                }
-                R.id.nav_contour_test -> {
-                    startActivity(Intent(this, ContourTestActivity::class.java))
                     drawerLayout.closeDrawers()
                     true
                 }

@@ -16,9 +16,5 @@
             android:id="@+id/nav_face_swap"
             android:icon="@drawable/ic_menu_swap"
             android:title="@string/menu_face_swap" />
-        <item
-            android:id="@+id/nav_contour_test"
-            android:icon="@drawable/ic_tool_magic_halo"
-            android:title="Test contorno" />
     </group>
 </menu>
