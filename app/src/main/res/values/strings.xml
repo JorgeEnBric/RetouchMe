@@ -38,20 +38,14 @@
     <string name="selected_face">Rostro seleccionado: %1$d</string>
     <string name="select_profile">Perfil de reemplazo</string>
     <string name="select_reference_face">Rostro de referencia del perfil</string>
-    <string name="add_swap">Añadir a la lista de intercambio</string>
-    <string name="pending_swaps">Intercambios pendientes</string>
-    <string name="pending_swap_item">%1$s → %2$s</string>
-    <string name="remove_pending_swap">Quitar intercambio</string>
     <string name="apply_swaps">Incrustar rostro</string>
     <string name="select_face_first">Primero selecciona un rostro en la imagen</string>
-    <string name="swap_added">Intercambio añadido a la lista</string>
     <string name="swap_faces">Intercambiar rostros</string>
     <string name="result_image">Resultado</string>
     <string name="save_result">Guardar resultado</string>
     <string name="face_number">Rostro %1$d</string>
     <string name="no_swap">Sin cambio</string>
     <string name="no_profiles_warning">Crea perfiles con fotos antes de intercambiar rostros</string>
-    <string name="select_at_least_one_profile">Selecciona al menos un perfil para intercambiar</string>
     <string name="profile_has_no_faces">El perfil seleccionado no tiene rostros guardados</string>
     <string name="swap_complete">Retoque aplicado</string>
     <string name="error_loading_image">Error al cargar la imagen</string>
@@ -66,6 +60,7 @@
     <string name="title_retake_edit">Retocar</string>
     <string name="preview_image">Vista previa del resultado</string>
     <string name="tool_zoom">Zoom</string>
+    <string name="tool_basic">Básico</string>
     <string name="tool_rotate">Rotación</string>
     <string name="tool_position">Posición</string>
     <string name="tool_position_h">Horizontal</string>
@@ -82,9 +77,9 @@
     <string name="post_apply_save">Guardar</string>
     <string name="image_saved_toast">Imagen guardada en Pictures/Retouch Me</string>
 
-    <string name="tool_halo">Halo / borde</string>
+    <string name="tool_halo">Matizar halo</string>
     <string name="tool_halo_general">Borde general</string>
-    <string name="tool_halo_brush_hint">Mantén presionado para borrar el halo del borde</string>
+    <string name="tool_halo_brush_hint">Arrastra para matizar el halo del borde</string>
     <string name="tool_halo_paint_mode">Borrador activo</string>
     <string name="tool_halo_radius">Radio del borrador</string>
     <string name="tool_halo_intensity">Intensidad</string>
@@ -106,12 +101,6 @@
     <string name="continue_label">Continuar</string>
     <string name="cancel">Cancelar</string>
     <string name="apply">Aplicar</string>
-    <string name="tool_magic_halo">Halo mágico</string>
-    <string name="tool_magic_halo_apply">Aplicar halo mágico</string>
-    <string name="tool_magic_halo_clear">Quitar halo</string>
-    <string name="tool_magic_halo_hint">Detecta el contorno del rostro y recorta la máscara al borde facial</string>
-    <string name="tool_magic_halo_applied">Halo mágico aplicado</string>
-    <string name="tool_magic_halo_cleared">Halo mágico eliminado</string>
     <string name="tool_frame_expand">Expandir encuadre</string>
     <string name="tool_frame_expand_h">Ancho del encuadre</string>
     <string name="tool_frame_expand_v">Alto del encuadre</string>

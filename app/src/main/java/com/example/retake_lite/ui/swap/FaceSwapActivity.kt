@@ -43,22 +43,10 @@ class FaceSwapActivity : AppCompatActivity() {
     private var profileImagesCache = mutableMapOf<Long, List<FaceImageEntity>>()
     private var selectedFaceIndex: Int = -1
     private var selectedReferenceId: Long? = null
-    private var lastAssignments: List<FaceSwapAssignment> = emptyList()
-    private val pendingSwaps = mutableListOf<PendingSwap>()
 
-    /**
-     * Toggle de modo de selección de referencia:
-     *  - false (manual, default): se usa la foto que el usuario elige en
-     *    recyclerReferenceFaces (selectedReferenceId), igual que antes.
-     *  - true (automático): se delega en el FaceProfileModel de OpenFace
-     *    (swapEngine.getAutoSelectedReferenceId) — se pasa referenceImageId
-     *    = null en el assignment para que FaceRetakeEngine.resolveReference
-     *    use el bestReferenceId del modelo en vez de forzar una foto.
-     */
     private var useAutoSelection = false
 
     private lateinit var referenceAdapter: ReferenceFaceAdapter
-    private lateinit var pendingAdapter: PendingSwapAdapter
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -76,17 +64,11 @@ class FaceSwapActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        setupAdapters()
+        setupReferenceAdapter()
 
         binding.btnPickImage.setOnClickListener { pickImageLauncher.launch("image/*") }
-        binding.btnAddSwap.setOnClickListener { addPendingSwap() }
         binding.btnSwap.setOnClickListener { performSwap() }
 
-
-        // NUEVO: switch de selección automática. Requiere un
-        // <com.google.android.material.switchmaterial.SwitchMaterial
-        //     android:id="@+id/switchAutoSelect" .../>
-        // en activity_face_swap.xml (ver nota al final de la respuesta).
         binding.switchAutoSelect.setOnCheckedChangeListener { _, isChecked ->
             useAutoSelection = isChecked
             onAutoSelectionToggled()
@@ -110,7 +92,7 @@ class FaceSwapActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupAdapters() {
+    private fun setupReferenceAdapter() {
         referenceAdapter = ReferenceFaceAdapter { image ->
             selectedReferenceId = image.id
         }
@@ -118,25 +100,8 @@ class FaceSwapActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@FaceSwapActivity, LinearLayoutManager.HORIZONTAL, false)
             adapter = referenceAdapter
         }
-
-        pendingAdapter = PendingSwapAdapter { swap ->
-            pendingSwaps.remove(swap)
-            pendingAdapter.submitList(pendingSwaps.toList())
-            updatePendingVisibility()
-            updateSwapButtonState()
-        }
-        binding.recyclerPendingSwaps.apply {
-            layoutManager = LinearLayoutManager(this@FaceSwapActivity)
-            adapter = pendingAdapter
-        }
     }
 
-    /**
-     * Se llama al cambiar el switch. En modo automático, el selector manual
-     * se deshabilita visualmente (sigue mostrando las fotos, pero no se usa
-     * la selección) y se resalta cuál foto eligió el modelo, para que el
-     * usuario vea la decisión y pueda volver a manual si no le convence.
-     */
     private fun onAutoSelectionToggled() {
         binding.recyclerReferenceFaces.alpha = if (useAutoSelection) 0.5f else 1.0f
         binding.recyclerReferenceFaces.isEnabled = !useAutoSelection
@@ -153,8 +118,6 @@ class FaceSwapActivity : AppCompatActivity() {
                 autoId?.let { referenceAdapter.setSelection(it) }
             }
         } else {
-            // Al volver a manual, se resalta lo último seleccionado a mano
-            // (o la primera foto si nunca se eligió nada explícitamente).
             referenceAdapter.setSelection(selectedReferenceId ?: images.first().id)
         }
     }
@@ -192,13 +155,10 @@ class FaceSwapActivity : AppCompatActivity() {
     private fun resetSwapState() {
         resultBitmap?.recycle()
         resultBitmap = null
-        pendingSwaps.clear()
-        pendingAdapter.submitList(emptyList())
         selectedFaceIndex = -1
         selectedReferenceId = null
         binding.imageResult.visibility = View.GONE
         binding.cardSelection.visibility = View.GONE
-        updatePendingVisibility()
         updateSwapButtonState()
     }
 
@@ -239,6 +199,7 @@ class FaceSwapActivity : AppCompatActivity() {
         if (profilePosition in profiles.indices) {
             loadReferenceFaces(profiles[profilePosition].id)
         }
+        updateSwapButtonState()
     }
 
     private fun loadReferenceFaces(profileId: Long) {
@@ -254,12 +215,8 @@ class FaceSwapActivity : AppCompatActivity() {
             }
 
             if (useAutoSelection) {
-                // En modo automático resaltamos la elección del modelo en
-                // vez de la primera foto de la lista.
                 val autoId = swapEngine.getAutoSelectedReferenceId(profileId, images)
                 referenceAdapter.setSelection(autoId ?: images.first().id)
-                // selectedReferenceId se deja como referencia de respaldo
-                // para cuando el usuario vuelva a modo manual.
                 selectedReferenceId = autoId ?: images.first().id
             } else {
                 selectedReferenceId = images.first().id
@@ -268,7 +225,12 @@ class FaceSwapActivity : AppCompatActivity() {
         }
     }
 
-    private fun addPendingSwap() {
+    private fun updateSwapButtonState() {
+        binding.btnSwap.isEnabled = selectedFaceIndex >= 0 && sourceBitmap != null && profiles.isNotEmpty()
+    }
+
+    private fun performSwap() {
+        val bitmap = sourceBitmap ?: return
         if (selectedFaceIndex < 0) {
             Snackbar.make(binding.root, R.string.select_face_first, Snackbar.LENGTH_SHORT).show()
             return
@@ -284,72 +246,18 @@ class FaceSwapActivity : AppCompatActivity() {
             return
         }
 
-        // CLAVE: en modo automático se guarda null como referenceImageId.
-        // Eso es lo que hace que FaceRetakeEngine.resolveReference use el
-        // bestReferenceId del FaceProfileModel en vez de forzar una foto
-        // fija — y además, si el perfil cambia (se agregan/quitan fotos)
-        // antes del swap final, la elección automática se recalcula con
-        // el contenido más reciente en vez de quedar "congelada".
         val referenceId: Long? = if (useAutoSelection) null else (selectedReferenceId ?: images.first().id)
-        val faceLabel = getString(R.string.face_number, selectedFaceIndex + 1)
-
-        pendingSwaps.removeAll { it.faceIndex == selectedFaceIndex }
-        pendingSwaps.add(
-            PendingSwap(
-                faceIndex = selectedFaceIndex,
-                faceLabel = faceLabel,
-                profileId = profile.id,
-                profileName = profile.name,
-                referenceImageId = referenceId,
-                isAutoSelected = useAutoSelection
-            )
-        )
-
-        pendingAdapter.submitList(pendingSwaps.toList())
-        updatePendingVisibility()
-        updateSwapButtonState()
-
-        Snackbar.make(binding.root, R.string.swap_added, Snackbar.LENGTH_SHORT).show()
-    }
-
-    private fun updatePendingVisibility() {
-        val hasPending = pendingSwaps.isNotEmpty()
-        binding.textPendingTitle.visibility = if (hasPending) View.VISIBLE else View.GONE
-        binding.recyclerPendingSwaps.visibility = if (hasPending) View.VISIBLE else View.GONE
-    }
-
-    private fun updateSwapButtonState() {
-        binding.btnSwap.isEnabled = pendingSwaps.isNotEmpty() && sourceBitmap != null
-    }
-
-    private fun performSwap() {
-        val bitmap = sourceBitmap ?: return
-        if (pendingSwaps.isEmpty()) {
-            Snackbar.make(binding.root, R.string.select_at_least_one_profile, Snackbar.LENGTH_SHORT).show()
-            return
-        }
+        val assignment = FaceSwapAssignment(selectedFaceIndex, profile.id, referenceId)
 
         binding.progressBar.visibility = View.VISIBLE
         binding.btnSwap.isEnabled = false
 
-        val assignments = pendingSwaps.map {
-            FaceSwapAssignment(it.faceIndex, it.profileId, it.referenceImageId)
-        }
-        lastAssignments = assignments
-
         lifecycleScope.launch {
+            val profileImages = mutableMapOf<Long, List<FaceImageEntity>>()
+            profileImages[profile.id] = images
+
             val result = withContext(Dispatchers.Default) {
-                val profileImages = mutableMapOf<Long, List<FaceImageEntity>>()
-
-                assignments.forEach { assignment ->
-                    if (!profileImages.containsKey(assignment.profileId)) {
-                        profileImages[assignment.profileId] =
-                            profileImagesCache[assignment.profileId]
-                                ?: repository.getImagesForProfile(assignment.profileId)
-                    }
-                }
-
-                swapEngine.swapFaces(bitmap, detectedFaces, assignments, profileImages)
+                swapEngine.swapFaces(bitmap, detectedFaces, listOf(assignment), profileImages)
             }
 
             resultBitmap?.recycle()
@@ -357,19 +265,11 @@ class FaceSwapActivity : AppCompatActivity() {
             binding.progressBar.visibility = View.GONE
             binding.btnSwap.isEnabled = true
 
-            openEditScreen()
+            openEditScreen(assignment)
         }
     }
 
-    /**
-     * Abre RetakeEditActivity para ajustar manualmente zoom/rotación/halo/tono
-     * del único rostro intercambiado en el último swap. Recalcula el
-     * AutoRetakeResult (detección + alineación) una vez aquí, ya que
-     * swapFaces() no lo expone — pero esta vez ya está cacheado en
-     * FaceRetakeEngine.modelCache, así que es rápido.
-     */
-    private fun openEditScreen() {
-        val assignment = lastAssignments.singleOrNull() ?: return
+    private fun openEditScreen(assignment: FaceSwapAssignment) {
         val bitmap = sourceBitmap ?: return
         val targetFace = detectedFaces.getOrNull(assignment.faceIndex) ?: return
 
