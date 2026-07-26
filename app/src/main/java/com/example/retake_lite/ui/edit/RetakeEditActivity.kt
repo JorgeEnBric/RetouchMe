@@ -408,7 +408,7 @@ class RetakeEditActivity : AppCompatActivity() {
 
         when (tool) {
             Tool.ZOOM -> {
-                binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_zoom)
+                binding.textActiveTool.setText(com.example.retake_lite.R.string.tool_basic)
                 binding.layoutZoomSliders.visibility = View.VISIBLE
                 binding.sliderTool.value = scaleToSlider(adjustments.scale)
                 binding.sliderRotation.value = adjustments.rotationDegrees.coerceIn(-25f, 25f)

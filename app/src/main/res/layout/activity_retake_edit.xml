@@ -431,7 +431,7 @@
                 style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
-                android:contentDescription="@string/tool_zoom"
+                android:contentDescription="@string/tool_basic"
                 app:icon="@drawable/ic_tool_zoom"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp" />
