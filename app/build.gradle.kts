@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.retake_lite"
+    namespace = "com.example.retouchme"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.retake_lite"
+        applicationId = "com.example.retouchme"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
