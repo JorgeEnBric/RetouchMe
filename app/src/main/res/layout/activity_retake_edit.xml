@@ -43,13 +43,13 @@
                 android:layout_gravity="center"
                 android:visibility="gone" />
 
-            <com.example.retake_lite.ui.edit.ToneCursorView
+            <com.example.retouchme.ui.edit.ToneCursorView
                 android:id="@+id/toneCursor"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone" />
 
-            <com.example.retake_lite.ui.edit.ZoomIndicatorView
+            <com.example.retouchme.ui.edit.ZoomIndicatorView
                 android:id="@+id/zoomIndicator"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
