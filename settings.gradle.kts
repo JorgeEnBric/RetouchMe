@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Retake_lite"
+rootProject.name = "retouchme"
 include(":app")
