@@ -43,13 +43,13 @@
                 android:layout_gravity="center"
                 android:visibility="gone" />
 
-            <com.example.retouchme.ui.edit.ToneCursorView
+            <com.georgeb.retouchme.ui.edit.ToneCursorView
                 android:id="@+id/toneCursor"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone" />
 
-            <com.example.retouchme.ui.edit.ZoomIndicatorView
+            <com.georgeb.retouchme.ui.edit.ZoomIndicatorView
                 android:id="@+id/zoomIndicator"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"

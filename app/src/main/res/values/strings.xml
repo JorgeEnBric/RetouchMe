@@ -8,10 +8,10 @@
     <string name="action_settings">Ajustes</string>
 
     <string name="menu_home">Inicio</string>
-    <string name="menu_profiles">Perfiles de rostros</string>
+    <string name="menu_profiles">Rostro ideal</string>
     <string name="menu_face_swap">Retouch Me</string>
 
-    <string name="title_profiles">Perfiles de rostros</string>
+    <string name="title_profiles">Rostro ideal</string>
     <string name="title_face_swap">Retouch Me</string>
     <string name="profiles_empty">No hay perfiles.\nPulsa + para crear uno y añade 4 a 12 fotos variadas.</string>
     <string name="add_profile">Crear perfil</string>
@@ -38,7 +38,7 @@
     <string name="selected_face">Rostro seleccionado: %1$d</string>
     <string name="select_profile">Perfil de reemplazo</string>
     <string name="select_reference_face">Rostro de referencia del perfil</string>
-    <string name="apply_swaps">Incrustar rostro</string>
+    <string name="apply_swaps">Retocar rostro</string>
     <string name="select_face_first">Primero selecciona un rostro en la imagen</string>
     <string name="swap_faces">Intercambiar rostros</string>
     <string name="result_image">Resultado</string>
@@ -54,8 +54,8 @@
 
     <string name="home_title">Bienvenido a Retouch Me</string>
     <string name="home_description">Prepara tus mejores fotos y usalas para aplicar un retoque autentico sobre rostros de otras imágenes.</string>
-    <string name="open_profiles">Gestionar perfiles</string>
-    <string name="open_face_swap">Incrustar rostro</string>
+    <string name="open_profiles">Perfil rostro ideal</string>
+    <string name="open_face_swap">Retocar rostro</string>
     <!-- Entradas de ajustes de Retake -->
     <string name="title_retake_edit">Retocar</string>
     <string name="preview_image">Vista previa del resultado</string>

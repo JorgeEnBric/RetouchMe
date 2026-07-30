@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.retouchme"
+    namespace = "com.georgeb.retouchme"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.retouchme"
+        applicationId = "com.georgeb.retouchme"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
