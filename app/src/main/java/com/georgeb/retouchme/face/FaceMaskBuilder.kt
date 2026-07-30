@@ -131,16 +131,16 @@ object FaceMaskBuilder {
         val sorted = points.sortedWith(compareBy({ it.x }, { it.y }))
         val lower = mutableListOf<PointF>()
         for (p in sorted) {
-            while (lower.size >= 2 && cross(lower[lower.size - 2], lower[lower.size - 1], p) <= 0) lower.removeLast()
+            while (lower.size >= 2 && cross(lower[lower.size - 2], lower[lower.size - 1], p) <= 0) lower.removeAt(lower.lastIndex)
             lower.add(p)
         }
         val upper = mutableListOf<PointF>()
         for (p in sorted.reversed()) {
-            while (upper.size >= 2 && cross(upper[upper.size - 2], upper[upper.size - 1], p) <= 0) upper.removeLast()
+            while (upper.size >= 2 && cross(upper[upper.size - 2], upper[upper.size - 1], p) <= 0) upper.removeAt(upper.lastIndex)
             upper.add(p)
         }
-        lower.removeLast()
-        upper.removeLast()
+        lower.removeAt(lower.lastIndex)
+        upper.removeAt(upper.lastIndex)
         return lower + upper
     }
 
