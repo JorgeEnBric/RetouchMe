@@ -34,7 +34,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/pick_from_gallery" />
 
-            <com.example.retouchme.ui.swap.FaceOverlayView
+            <com.georgeb.retouchme.ui.swap.FaceOverlayView
                 android:id="@+id/faceOverlay"
                 android:layout_width="match_parent"
                 android:layout_height="320dp"
