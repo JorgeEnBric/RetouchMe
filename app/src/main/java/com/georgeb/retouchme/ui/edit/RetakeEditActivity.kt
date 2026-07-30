@@ -333,7 +333,7 @@ class RetakeEditActivity : AppCompatActivity() {
                 if (haloEraseMask != null) {
                     val snapshot = haloEraseMask!!.copy(Bitmap.Config.ARGB_8888, true)
                     if (haloUndoStack.size >= 20) {
-                        haloUndoStack.removeFirst().recycle()
+                        haloUndoStack.removeAt(0).recycle()
                     }
                     haloUndoStack.add(snapshot)
                 }
@@ -518,7 +518,7 @@ class RetakeEditActivity : AppCompatActivity() {
         binding.btnHaloUndo.setOnClickListener {
             if (haloUndoStack.isNotEmpty()) {
                 haloEraseMask?.recycle()
-                haloEraseMask = haloUndoStack.removeLast()
+                haloEraseMask = haloUndoStack.removeAt(haloUndoStack.lastIndex)
                 haloEraseCanvas = haloEraseMask?.let { Canvas(it) }
                 scheduleRender()
             }
