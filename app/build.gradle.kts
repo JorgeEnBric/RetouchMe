@@ -6,13 +6,13 @@ plugins {
 
 android {
     namespace = "com.georgeb.retouchme"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.georgeb.retouchme"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 2
+        targetSdk = 36
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -41,7 +41,7 @@ android {
 
 dependencies {
 
-    implementation ("com.microsoft.onnxruntime:onnxruntime-android:1.18.0")
+    implementation ("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
     implementation("org.opencv:opencv:4.13.0")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation(libs.androidx.appcompat)
